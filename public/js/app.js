@@ -1,5 +1,9 @@
-// --- Global state -----------------------------
+// BirdNET Live main client script
+// NOTE: Refactor only; logic preserved. Added comments, grouped sections, minor style consistency.
 
+/* -------------------------------------------------
+ * Global state
+ * ------------------------------------------------- */
 let isListening = false;
 let workerReady = false;
 let birdnetWorker = null;
@@ -17,25 +21,30 @@ const INFERENCE_INTERVAL_MS = 1500;
 
 let geolocation = null;
 let geoWatchId = null;
-
 let geoEnabled = true;
+
 let detectionThreshold = 0.25;
 let latestDetections = [];
 let inputGain = 1.0;
 
-const statusEl       = () => document.getElementById("statusText");
-const recordButtonEl = () => document.getElementById("recordButton");
-const recordLabelTextEl  = () => document.querySelector(".record-label-text");
-const detectionsList = () => document.getElementById("detectionsList");
-const geoStatusEl   = () => document.getElementById("geoStatusText");
-const geoCoordsEl   = () => document.getElementById("geoCoordsText");
-const settingsToggleEl = () => document.getElementById("settingsToggle");
-const settingsDrawerEl = () => document.getElementById("settingsDrawer");
-const settingsOverlayEl = () => document.getElementById("settingsOverlay");
-const statusIndicatorEl = () => document.getElementById("statusIndicator");
-const statusDebugEl = () => document.getElementById("statusDebugInfo");
+/* -------------------------------------------------
+ * DOM accessors (lazy lookups)
+ * ------------------------------------------------- */
+const statusEl             = () => document.getElementById("statusText");
+const recordButtonEl       = () => document.getElementById("recordButton");
+const recordLabelTextEl    = () => document.querySelector(".record-label-text");
+const detectionsList       = () => document.getElementById("detectionsList");
+const geoStatusEl          = () => document.getElementById("geoStatusText");
+const geoCoordsEl          = () => document.getElementById("geoCoordsText");
+const settingsToggleEl     = () => document.getElementById("settingsToggle");
+const settingsDrawerEl     = () => document.getElementById("settingsDrawer");
+const settingsOverlayEl    = () => document.getElementById("settingsOverlay");
+const statusIndicatorEl    = () => document.getElementById("statusIndicator");
+const statusDebugEl        = () => document.getElementById("statusDebugInfo"); // optional (may not exist)
 
-// --- Spectrogram (d3 magma, simple) ----------
+/* -------------------------------------------------
+ * Spectrogram config
+ * ------------------------------------------------- */
 let spectroCanvas, spectroCtx;
 let spectroAnimationId = null;
 let analyser;
@@ -54,6 +63,148 @@ let spectroGain = SPECTRO_DEFAULT_GAIN;
 let spectroColumnSeconds = 0;
 let lastSpectroColumnTime = 0;
 
+/* -------------------------------------------------
+ * Boot
+ * ------------------------------------------------- */
+document.addEventListener("DOMContentLoaded", () => {
+  initWorker();
+  setupRecordButton();
+  initUIControls();
+  setupSettingsToggle();
+  updateStatusIndicator();
+  if (geoEnabled) {
+    getGeolocation();
+  } else {
+    updateGeoDisplay("Geolocation disabled.", null);
+  }
+});
+
+/* -------------------------------------------------
+ * Worker setup
+ * ------------------------------------------------- */
+function initWorker() {
+  const tfPath = "/js/tfjs-4.14.0.min.js";
+  const root   = "/models";
+  const lang   = navigator.language || "en-US";
+
+  const params = new URLSearchParams({ tf: tfPath, root, lang });
+  birdnetWorker = new Worker(`/js/birdnet-worker.js?${params.toString()}`);
+
+  birdnetWorker.onmessage = (event) => {
+    const data = event.data || {};
+    switch (data.message) {
+      case "load_model":
+      case "warmup":
+      case "load_geomodel":
+      case "load_labels":
+        if (typeof data.progress === "number") {
+          statusEl().textContent = `Loading BirdNET… ${data.progress}%`;
+        }
+        break;
+      case "loaded":
+        workerReady = true;
+        statusEl().textContent = "Model ready. Tap Listen to start.";
+        if (geolocation) sendAreaScores();
+        break;
+      case "predict_debug":
+        // Debug info optional
+        break;
+      case "segments":
+        // Per-segment data (not visualized yet)
+        break;
+      case "pooled":
+        renderDetections(data.pooled);
+        break;
+      case "area-scores":
+        // Geo priors updated; worker handles refresh
+        break;
+      default:
+        break;
+    }
+  };
+
+  birdnetWorker.onerror = (err) => {
+    console.error("Worker error", err);
+    statusEl().textContent = "BirdNET worker error.";
+  };
+}
+
+/* -------------------------------------------------
+ * UI controls & ranges
+ * ------------------------------------------------- */
+function initUIControls() {
+  const geoToggle = document.getElementById("geoToggle");
+  if (geoToggle) {
+    geoToggle.checked = geoEnabled;
+    geoToggle.addEventListener("change", () => {
+      geoEnabled = geoToggle.checked;
+      if (geoEnabled) {
+        updateGeoDisplay("Requesting geolocation…", null);
+        getGeolocation();
+      } else {
+        geolocation = null;
+        updateGeoDisplay("Geolocation disabled.", null);
+        renderDetections();
+      }
+    });
+  }
+
+  bindRange("durationRange", spectroDurationSec, (v) => {
+    spectroDurationSec = v;
+    if (spectroCanvas && spectroCanvas.width > 0) {
+      spectroColumnSeconds = spectroDurationSec / spectroCanvas.width;
+    }
+  }, (v) => `${v}s`);
+
+  bindRange("zoomRange", spectroZoom, (v) => {
+    spectroZoom = v;
+  }, (v) => `${Math.round(v * 100)}%`);
+
+  bindRange("gainRange", spectroGain, (v) => {
+    spectroGain = v;
+  }, (v) => `${v.toFixed(1)}×`);
+
+  bindRange("thresholdRange", detectionThreshold * 100, (v) => {
+    detectionThreshold = v / 100;
+    renderDetections();
+  }, (v) => `${Math.round(v)}%`);
+
+  bindRange("inputGainRange", inputGain, (v) => {
+    inputGain = v;
+  }, (v) => `${v.toFixed(1)}×`);
+}
+
+function bindRange(id, initialValue, onChange, format) {
+  const input = document.getElementById(id);
+  const label = document.querySelector(`[id='${id.replace("Range", "Value")}']`);
+  if (!input) return;
+  if (typeof initialValue === "number") {
+    input.value = initialValue;
+  }
+  const setLabel = (val) => {
+    if (label) label.textContent = format ? format(val) : val;
+  };
+  setLabel(parseFloat(input.value));
+  input.addEventListener("input", () => {
+    const val = parseFloat(input.value);
+    onChange(val, input);
+    setLabel(val);
+  });
+}
+
+/* -------------------------------------------------
+ * Status indicator
+ * ------------------------------------------------- */
+function updateStatusIndicator() {
+  const indicator = statusIndicatorEl();
+  if (!indicator) return;
+  indicator.classList.toggle("active", isListening);
+  indicator.setAttribute("aria-label", isListening ? "Listening" : "Idle");
+}
+
+/* -------------------------------------------------
+ * Spectrogram init
+ * ------------------------------------------------- */
 function initSpectrogramCanvas() {
   if (spectroCanvas) return;
   spectroCanvas = document.getElementById("liveSpectrogram");
@@ -67,7 +218,6 @@ function initSpectrogramCanvas() {
 
 function resizeSpectrogramCanvas() {
   if (!spectroCanvas) return;
-
   const cssW = spectroCanvas.clientWidth || 600;
   const cssH = spectroCanvas.clientHeight || 220;
 
@@ -75,9 +225,7 @@ function resizeSpectrogramCanvas() {
   if (spectroCtx) {
     try {
       snapshot = spectroCtx.getImageData(0, 0, spectroCanvas.width, spectroCanvas.height);
-    } catch (_) {
-      snapshot = null;
-    }
+    } catch (_) {}
   }
 
   spectroCanvas.width = cssW;
@@ -87,9 +235,7 @@ function resizeSpectrogramCanvas() {
   spectroCtx.fillStyle = "#000";
   spectroCtx.fillRect(0, 0, cssW, cssH);
 
-  if (snapshot) {
-    spectroCtx.putImageData(snapshot, 0, 0);
-  }
+  if (snapshot) spectroCtx.putImageData(snapshot, 0, 0);
 
   spectroColumnSeconds = cssW > 0 ? spectroDurationSec / cssW : 0.05;
   lastSpectroColumnTime = audioContext ? audioContext.currentTime : 0;
@@ -112,7 +258,6 @@ function startSpectrogram(source) {
     const w = spectroCanvas.width || 600;
     spectroColumnSeconds = spectroDurationSec / w;
   }
-
   if (!spectroAnimationId) {
     spectroAnimationId = requestAnimationFrame(drawSpectrogram);
   }
@@ -134,7 +279,6 @@ function drawSpectrogram() {
   if (!analyser || !audioContext) return;
 
   analyser.getByteFrequencyData(dataArray);
-
   const w = spectroCanvas.width;
   const h = spectroCanvas.height;
   if (!w || !h) return;
@@ -146,10 +290,10 @@ function drawSpectrogram() {
   const audioNow = audioContext.currentTime;
   let columnsNeeded = Math.floor((audioNow - lastSpectroColumnTime) / spectroColumnSeconds);
   if (columnsNeeded <= 0) return;
-
   columnsNeeded = Math.min(columnsNeeded, w - 1);
   lastSpectroColumnTime += columnsNeeded * spectroColumnSeconds;
 
+  // Shift left
   spectroCtx.drawImage(
     spectroCanvas,
     columnsNeeded, 0, w - columnsNeeded, h,
@@ -167,7 +311,6 @@ function drawSpectrogram() {
       const magnitude = Math.max(1e-6, dataArray[i] / 255);
       let norm = Math.log1p(magnitude * spectroGain) / Math.log1p(1 + spectroGain);
       norm = Math.pow(Math.min(1, Math.max(0, norm)), SPECTRO_OUTPUT_GAMMA);
-
       const y = h - ((i - startBin) / (endBin - startBin)) * h;
       spectroCtx.fillStyle = d3.interpolateMagma(norm);
       spectroCtx.fillRect(x, y - barHeight, 1, barHeight);
@@ -175,165 +318,89 @@ function drawSpectrogram() {
   }
 }
 
-// --- Boot ------------------------------------
-
-document.addEventListener("DOMContentLoaded", () => {
-  initWorker();
-  setupRecordButton();
-  initUIControls();
-  setupSettingsToggle();
-  updateStatusIndicator();
-  if (geoEnabled) {
-    getGeolocation();
-  } else {
-    updateGeoDisplay("Geolocation disabled.", null);
-  }
-});
-
-// --- Worker setup ----------------------------
-
-function initWorker() {
-  const tfPath = "/js/tfjs-4.14.0.min.js";
-  const root   = "/models";
-  const lang   = navigator.language || "en-US";
-
-  const params = new URLSearchParams({
-    tf: tfPath,
-    root,
-    lang
-  });
-
-  birdnetWorker = new Worker(`/js/birdnet-worker.js?${params.toString()}`);
-
-  birdnetWorker.onmessage = (event) => {
-    const data = event.data || {};
-    switch (data.message) {
-      case "load_model":
-      case "warmup":
-      case "load_geomodel":
-      case "load_labels":
-        // Simple progress text
-        if (typeof data.progress === "number") {
-          statusEl().textContent = `Loading BirdNET… ${data.progress}%`;
-        }
-        break;
-
-      case "loaded":
-        workerReady = true;
-        statusEl().textContent = "Model ready. Tap Listen to start.";
-        // If we already have geolocation, send area scores now
-        if (geolocation) {
-          sendAreaScores();
-        }
-        break;
-
-      case "predict_debug":
-        // Optional: use data.top10PerBatch for console debugging
-        // console.log("Debug top10", data.top10PerBatch);
-        break;
-
-      case "segments":
-        // data.segments: [{ start, end, preds: [...] }, ...]
-        // You could visualize this per-segment later if you’d like.
-        break;
-
-      case "pooled":
-        // data.pooled: [{ index, name, nameI18n, confidence, geoscore }, ...]
-        renderDetections(data.pooled);
-        break;
-
-      case "area-scores":
-        // area-based scores have been updated; worker will also re-emit pooled
-        break;
-
-      default:
-        // Unknown message
-        break;
+/* -------------------------------------------------
+ * Record button wiring
+ * ------------------------------------------------- */
+function setupRecordButton() {
+  const btn = recordButtonEl();
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    if (!isListening) {
+      await startListening();
+    } else {
+      stopListening();
     }
-  };
-
-  birdnetWorker.onerror = (err) => {
-    console.error("Worker error", err);
-    statusEl().textContent = "BirdNET worker error.";
-  };
+  });
 }
 
-// --- Geolocation -----------------------------
+/* -------------------------------------------------
+ * Audio graph (mic stream + buffer + inference)
+ * ------------------------------------------------- */
+async function startListening() {
+  if (!workerReady) {
+    statusEl().textContent = "BirdNET model is still loading…";
+    return;
+  }
+  try {
+    isListening = true;
+    updateStatusIndicator();
+    const button = recordButtonEl();
+    if (button) button.classList.add("recording");
+    const label = recordLabelTextEl();
+    if (label) label.textContent = "Stop";
+    statusEl().textContent = "Requesting microphone access…";
 
-function initUIControls() {
-  const geoToggle = document.getElementById("geoToggle");
-  if (geoToggle) {
-    geoToggle.checked = geoEnabled;
-    geoToggle.addEventListener("change", () => {
-      geoEnabled = geoToggle.checked;
-      if (geoEnabled) {
-        updateGeoDisplay("Requesting geolocation…", null);
-        getGeolocation();
-      } else {
-        geolocation = null;
-        updateGeoDisplay("Geolocation disabled.", null);
-        renderDetections();
+    currentStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1,
+        sampleRate: SAMPLE_RATE,
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
       }
     });
+
+    setupAudioGraphFromStream(currentStream);
+    statusEl().textContent = "Listening… analysing audio with BirdNET.";
+  } catch (e) {
+    console.error(e);
+    statusEl().textContent = "Microphone access failed.";
+    isListening = false;
+    updateStatusIndicator();
+    const button = recordButtonEl();
+    if (button) button.classList.remove("recording");
+    const label = recordLabelTextEl();
+    if (label) label.textContent = "Listen";
   }
-
-  bindRange("durationRange", spectroDurationSec, (value) => {
-    spectroDurationSec = value;
-    if (spectroCanvas && spectroCanvas.width > 0) {
-      spectroColumnSeconds = spectroDurationSec / spectroCanvas.width;
-    }
-  }, (v) => `${v}s`);
-
-  bindRange("zoomRange", spectroZoom, (value) => {
-    spectroZoom = value;
-  }, (v) => `${Math.round(v * 100)}%`);
-
-  bindRange("gainRange", spectroGain, (value) => {
-    spectroGain = value;
-  }, (v) => `${v.toFixed(1)}×`);
-
-  bindRange("thresholdRange", detectionThreshold * 100, (value) => {
-    detectionThreshold = value / 100;
-    renderDetections();
-  }, (v) => `${Math.round(v)}%`);
-
-  bindRange("inputGainRange", inputGain, (value) => {
-    inputGain = value;
-  }, (v) => `${v.toFixed(1)}×`);
 }
 
-function bindRange(id, initialValue, onChange, labelFormatter) {
-  const input = document.getElementById(id);
-  const label = document.querySelector(`[id='${id.replace("Range", "Value")}']`);
-  if (!input) return;
-  if (typeof initialValue === "number") {
-    input.value = initialValue;
+function stopListening() {
+  isListening = false;
+  updateStatusIndicator();
+  const button = recordButtonEl();
+  if (button) button.classList.remove("recording");
+  const label = recordLabelTextEl();
+  if (label) label.textContent = "Listen";
+  statusEl().textContent = "Stopped. Spectrogram frozen.";
+
+  if (currentStream) {
+    currentStream.getTracks().forEach(t => t.stop());
+    currentStream = null;
   }
-  const updateLabel = (value) => {
-    if (label) {
-      label.textContent = labelFormatter ? labelFormatter(value) : value;
-    }
-  };
-  updateLabel(parseFloat(input.value));
-  input.addEventListener("input", () => {
-    const value = parseFloat(input.value);
-    onChange(value, input);
-    updateLabel(value);
-  });
+  if (scriptNode) {
+    scriptNode.disconnect();
+    scriptNode.onaudioprocess = null;
+    scriptNode = null;
+  }
+  if (audioContext) {
+    stopSpectrogram();
+    audioContext.close();
+    audioContext = null;
+  }
 }
 
-function updateStatusIndicator() {
-  const indicator = statusIndicatorEl();
-  if (!indicator) return;
-  indicator.classList.toggle("active", isListening);
-  indicator.setAttribute("aria-label", isListening ? "Listening" : "Idle");
-}
-
-// --- Audio graph (mic + buffer) ---------------
 function setupAudioGraphFromStream(stream) {
-  audioContext = new (window.AudioContext || window.webkitAudioContext)({
-    sampleRate: SAMPLE_RATE
-  });
+  audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE });
   const source = audioContext.createMediaStreamSource(stream);
   startSpectrogram(source);
 
@@ -356,148 +423,47 @@ function setupAudioGraphFromStream(stream) {
   startInferenceLoop();
 }
 
-// --- Record button ---------------------------
-
-function setupRecordButton() {
-  const btn = recordButtonEl();
-  if (!btn) return;
-  btn.addEventListener("click", async () => {
-    if (!isListening) {
-      await startListening();
-    } else {
-      stopListening();
-    }
-  });
-}
-
-// --- Audio capture ---------------------------
-
-async function startListening() {
-  if (!workerReady) {
-    statusEl().textContent = "BirdNET model is still loading…";
-    return;
-  }
-  try {
-    isListening = true;
-    updateStatusIndicator();
-    const button = recordButtonEl();
-    if (button) {
-      button.classList.add("recording");
-    }
-    const label = recordLabelTextEl();
-    if (label) {
-      label.textContent = "Stop";
-    }
-    statusEl().textContent = "Requesting microphone access…";
-    currentStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        channelCount: 1,
-        sampleRate: SAMPLE_RATE,
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false
-      }
-    });
-    setupAudioGraphFromStream(currentStream);
-    statusEl().textContent = "Listening… analysing audio with BirdNET.";
-  } catch (e) {
-    console.error(e);
-    statusEl().textContent = "Microphone access failed.";
-    isListening = false;
-    updateStatusIndicator();
-    const button = recordButtonEl();
-    if (button) {
-      button.classList.remove("recording");
-    }
-    const label = recordLabelTextEl();
-    if (label) {
-      label.textContent = "Listen";
-    }
-  }
-}
-
-function stopListening() {
-  isListening = false;
-  updateStatusIndicator();
-  const button = recordButtonEl();
-  if (button) {
-    button.classList.remove("recording");
-  }
-  const label = recordLabelTextEl();
-  if (label) {
-    label.textContent = "Listen";
-  }
-  statusEl().textContent = "Stopped. Spectrogram frozen.";
-
-  if (currentStream) {
-    currentStream.getTracks().forEach(t => t.stop());
-    currentStream = null;
-  }
-  if (scriptNode) {
-    scriptNode.disconnect();
-    scriptNode.onaudioprocess = null;
-    scriptNode = null;
-  }
-  if (audioContext) {
-    stopSpectrogram();
-    audioContext.close();
-    audioContext = null;
-  }
-  // Do NOT clear or reset spectroInitialized.
-}
-
-// --- Inference loop --------------------------
-
+/* -------------------------------------------------
+ * Inference loop
+ * ------------------------------------------------- */
 function startInferenceLoop() {
   const tick = () => {
     if (!isListening || !workerReady || !circularBuffer || !birdnetWorker) return;
-
     const windowed = getCurrentWindow();
     if (windowed) {
-      // Send to worker; transfer the underlying ArrayBuffer for efficiency
       birdnetWorker.postMessage(
-        {
-          message: "predict",
-          pcmAudio: windowed,
-          overlapSec: 1.5 // matches your worker default
-        },
+        { message: "predict", pcmAudio: windowed, overlapSec: 1.5 },
         [windowed.buffer]
       );
     }
-
-    if (isListening) {
-      setTimeout(tick, INFERENCE_INTERVAL_MS);
-    }
+    if (isListening) setTimeout(tick, INFERENCE_INTERVAL_MS);
   };
-
   tick();
 }
 
 function getCurrentWindow() {
   if (!circularBuffer) return null;
-
-  // Copy from circular buffer into a fresh Float32Array in chronological order
   const result = new Float32Array(WINDOW_SAMPLES);
   let idx = circularWriteIndex;
   for (let i = 0; i < WINDOW_SAMPLES; i++) {
-    const sample = circularBuffer[idx];
-    result[i] = Math.max(-1, Math.min(1, sample * inputGain));
+    result[i] = Math.max(-1, Math.min(1, circularBuffer[idx] * inputGain));
     idx = (idx + 1) % circularBuffer.length;
   }
   return result;
 }
 
-// --- UI: detections list ---------------------
-
+/* -------------------------------------------------
+ * Detections rendering
+ * ------------------------------------------------- */
 function renderDetections(pooled) {
-  if (Array.isArray(pooled)) {
-    latestDetections = pooled;
-  }
+  if (Array.isArray(pooled)) latestDetections = pooled;
+
   const container = detectionsList();
   if (!container) return;
 
   const useGeoFilter = geoEnabled && !!geolocation;
   const source = latestDetections || [];
+
   const normalized = source.map((p) => {
     const geo = typeof p.geoscore === "number" ? p.geoscore : null;
     const meetsGeo = !useGeoFilter || (geo !== null && geo > 0.05);
@@ -508,7 +474,7 @@ function renderDetections(pooled) {
     };
   });
 
-  const filtered = normalized.filter((entry) => entry.displayConfidence >= detectionThreshold);
+  const filtered = normalized.filter((e) => e.displayConfidence >= detectionThreshold);
   const sorted = filtered
     .sort((a, b) => b.displayConfidence - a.displayConfidence)
     .slice(0, 20);
@@ -527,11 +493,7 @@ function renderDetections(pooled) {
 
   sorted.forEach(({ item, geo, displayConfidence }) => {
     const confPct = (displayConfidence * 100).toFixed(1);
-    const geoInfo =
-      useGeoFilter && geo !== null
-        ? ` · Geo prior: ${(geo * 100).toFixed(1)}%`
-        : "";
-
+    const geoInfo = useGeoFilter && geo !== null ? ` · Geo prior: ${(geo * 100).toFixed(1)}%` : "";
     const name = item.nameI18n || item.name || `Class ${item.index}`;
 
     const card = document.createElement("div");
@@ -557,11 +519,11 @@ function renderDetections(pooled) {
     `;
     container.appendChild(card);
   });
-
 }
 
-// --- Settings toggle -------------------------
-
+/* -------------------------------------------------
+ * Settings (drawer) toggle
+ * ------------------------------------------------- */
 function setupSettingsToggle() {
   const toggle = settingsToggleEl();
   const drawer = settingsDrawerEl();
@@ -586,31 +548,24 @@ function setupSettingsToggle() {
     setState(open);
   });
 
-  if (overlay) {
-    overlay.addEventListener("click", () => setState(false));
-  }
-  if (closeBtn) {
-    closeBtn.addEventListener("click", () => setState(false));
-  }
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      setState(false);
-    }
+  if (overlay) overlay.addEventListener("click", () => setState(false));
+  if (closeBtn) closeBtn.addEventListener("click", () => setState(false));
+  document.addEventListener("keydown", (evt) => {
+    if (evt.key === "Escape") setState(false);
   });
 }
 
-// --- Geolocation helpers ---------------------
-
+/* -------------------------------------------------
+ * Geolocation
+ * ------------------------------------------------- */
 function updateGeoDisplay(message, coords) {
   const status = geoStatusEl();
   const coordsEl = geoCoordsEl();
   if (status) status.textContent = message;
   if (coordsEl) {
-    if (coords) {
-      coordsEl.textContent = `${coords.lat.toFixed(4)}, ${coords.lon.toFixed(4)} (±${Math.round(coords.accuracy)}m)`;
-    } else {
-      coordsEl.textContent = "—";
-    }
+    coordsEl.textContent = coords
+      ? `${coords.lat.toFixed(4)}, ${coords.lon.toFixed(4)} (±${Math.round(coords.accuracy)}m)`
+      : "—";
   }
 }
 
@@ -624,6 +579,7 @@ function getGeolocation() {
     geoWatchId = null;
   }
   updateGeoDisplay("Requesting geolocation…", null);
+
   geoWatchId = navigator.geolocation.watchPosition(
     (pos) => {
       geolocation = {
@@ -653,7 +609,6 @@ function getGeolocation() {
 function sendAreaScores() {
   if (!birdnetWorker || !geolocation) return;
   const now = new Date();
-  // BirdNET week number (1–52) approximation:
   const startYear = new Date(now.getFullYear(), 0, 1);
   const week = Math.min(
     52,

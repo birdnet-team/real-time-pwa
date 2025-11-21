@@ -2,100 +2,60 @@ body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-/* Container width tweak if you like wider */
+/* Optional wider container */
 @media (min-width: 1200px) {
-  .container {
-    max-width: 1500px;
-  }
+  .container { max-width: 1500px; }
 }
 
-/* Navbar logo */
-.navbar-logo {
-  height: 32px;
-  width: auto;
-}
+.navbar-logo { height: 32px; width: auto; }
 
 /* Hero */
-
 .hero-landing {
   position: relative;
   padding: 5rem 0 4rem;
   color: #fff;
-  background-image: url("/img/hero-placeholder.jpg"); /* TODO: replace */
+  background-image: url("/img/hero-placeholder.jpg");
   background-size: cover;
   background-position: center;
   border-bottom-left-radius: 1.5rem;
   border-bottom-right-radius: 1.5rem;
   overflow: hidden;
 }
-
 .hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(6, 14, 26, 0.9), rgba(15, 76, 129, 0.9));
+  background: linear-gradient(135deg, rgba(6,14,26,0.9), rgba(15,76,129,0.9));
 }
-
-.hero-landing-content {
-  position: relative;
-  z-index: 1;
-}
-
-.hero-title {
-  font-size: clamp(2.4rem, 4vw, 3.2rem);
-  font-weight: 650;
-}
-
-.hero-subtitle {
-  font-size: clamp(1.1rem, 2.2vw, 1.3rem);
-  max-width: 40rem;
-}
+.hero-landing-content { position: relative; z-index: 1; }
+.hero-title { font-size: clamp(2.4rem, 4vw, 3.2rem); font-weight: 650; }
+.hero-subtitle { font-size: clamp(1.1rem, 2.2vw, 1.3rem); max-width: 40rem; }
 
 /* Page header */
-.page-header {
-  padding-top: 3rem;
-  padding-bottom: 1.5rem;
-}
+.page-header { padding-top: 3rem; padding-bottom: 1.5rem; }
+.page-title { font-size: clamp(2rem, 3vw, 2.4rem); font-weight: 650; }
 
-.page-title {
-  font-size: clamp(2rem, 3vw, 2.4rem);
-  font-weight: 650;
-}
-
-/* Spectrogram area */
+/* Spectrogram container */
 #spectrogram-container {
   position: relative;
   background: #020617;
   border-radius: 0.75rem;
   overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.4);
+  border: 1px solid rgba(148,163,184,0.4);
 }
-
 .spectrogram-wave,
-.spectrogram-view {
-  height: 140px;
-}
-
+.spectrogram-view { height: 140px; }
 @media (min-width: 768px) {
-  .spectrogram-wave {
-    height: 100px;
-  }
-  .spectrogram-view {
-    height: 160px;
-  }
+  .spectrogram-wave { height: 100px; }
+  .spectrogram-view { height: 160px; }
 }
 
-#statusText {
-  margin: 0;
-  font-size: inherit;
-  color: inherit;
-}
-
+/* Status bar */
+#statusText { margin: 0; font-size: inherit; color: inherit; }
 .status-bar {
   background: #212529;
   color: #e2e8f0;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  border-bottom: 1px solid rgba(148,163,184,0.25);
 }
-
 .status-bar-inner {
   width: 100%;
   max-width: 960px;
@@ -103,48 +63,50 @@ body {
   padding: 0.1rem 1rem;
   display: flex;
   align-items: center;
-  gap: 0.75rem; /* slightly tighter now that gear is inside */
+  gap: 0.75rem;
   flex-wrap: wrap;
   font-size: 0.85rem;
   line-height: 1.3;
-  justify-content: flex-start; /* align left */
+  justify-content: flex-start;
 }
-
 .status-main {
   display: flex;
   align-items: center;
   gap: 0.6rem;
   flex: 1 1 260px;
 }
-
 .status-message {
   display: inline-flex;
   align-items: center;
 }
 
+/* Settings toggle (single consolidated block) */
 .settings-toggle-btn {
+  width: 3rem;
+  height: 3rem;
+  padding: 0.25rem;
+  border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.25rem;
   color: #ffffff;
   text-decoration: none;
   border: none;
   outline: none;
   margin-right: 0.25rem;
 }
-
 .settings-toggle-btn:hover,
-.settings-toggle-btn:focus {
-  color: #0d6efd;
-  text-decoration: none;
-}
-
+.settings-toggle-btn:focus { color: #0d6efd; text-decoration: none; }
 .settings-toggle-btn:focus-visible {
-  box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.45);
-  border-radius: 0.35rem;
+  box-shadow: 0 0 0 0.15rem rgba(13,110,253,0.45);
+}
+.settings-toggle-btn.active {
+  background-color: #0d6efd;
+  color: #fff;
+  border-color: #0d6efd;
 }
 
+/* Record button floating */
 .record-btn {
   position: fixed;
   left: 50%;
@@ -154,102 +116,68 @@ body {
 }
 
 @media (max-width: 575.98px) {
-  .status-bar-inner {
-    align-items: flex-start;
-  }
-
-  .status-debug {
-    flex-basis: 100%;
-  }
+  .status-bar-inner { align-items: flex-start; }
+  .status-debug { flex-basis: 100%; }
 }
 
-/* Make sure there is room at bottom so content isn't hidden */
-main {
-  padding-bottom: 4.5rem;
-}
+/* Ensure bottom space for button */
+main { padding-bottom: 4.5rem; }
 
-/* Spectrogram (custom) */
+/* Live spectrogram canvas */
 .live-spectrogram-canvas {
   width: 100%;
-  height: 15.0rem;
+  height: 15rem;
   display: block;
   background: #000;
   image-rendering: pixelated;
   border-radius: 0.5rem;
   cursor: crosshair;
 }
-
 .spectrogram-full {
   width: 100%;
   background: #020617;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.4);
+  border-bottom: 1px solid rgba(148,163,184,0.4);
 }
-
-.spectrogram-full .live-spectrogram-canvas {
-  height: 18rem;
-}
-
+.spectrogram-full .live-spectrogram-canvas { height: 18rem; }
 @media (min-width: 992px) {
-  .spectrogram-full .live-spectrogram-canvas {
-    height: 20rem;
-  }
+  .spectrogram-full .live-spectrogram-canvas { height: 20rem; }
 }
 
-.settings-toggle-btn {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.settings-toggle-btn.active {
-  background-color: #0d6efd;
-  color: #fff;
-  border-color: #0d6efd;
-}
-
+/* Settings layout */
 .settings-grid {
   display: grid;
-  gap: 1.0rem;
+  gap: 1rem;
 }
-
 @media (min-width: 768px) {
-  .settings-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  .settings-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
 }
 
-.form-range-value {
-  font-variant-numeric: tabular-nums;
-}
+.form-range-value { font-variant-numeric: tabular-nums; }
 
 .geo-status {
   font-size: 0.875rem;
-  color: rgba(148, 163, 184, 0.9);
+  color: rgba(148,163,184,0.9);
 }
 
 .container > .row.text-center + .d-flex,
-.container > .row.text-center {
-  margin-bottom: 1.5rem;
-}
+.container > .row.text-center { margin-bottom: 1.5rem; }
 
+/* Drawer overlay */
 .settings-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.55);
+  background: rgba(15,23,42,0.55);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease;
   z-index: 1040;
 }
-
 .settings-overlay.active {
   opacity: 1;
   pointer-events: auto;
 }
 
+/* Drawer panel */
 .settings-drawer {
   position: fixed;
   top: 0;
@@ -257,7 +185,7 @@ main {
   height: 100vh;
   width: min(100%, 380px);
   background: #ffffff;
-  box-shadow: -16px 0 40px rgba(15, 23, 42, 0.2);
+  box-shadow: -16px 0 40px rgba(15,23,42,0.2);
   transform: translateX(100%);
   transition: transform 0.3s ease;
   z-index: 1045;
@@ -266,15 +194,8 @@ main {
   padding: 1.5rem;
   overflow-y: auto;
 }
-
-.settings-drawer.open {
-  transform: translateX(0);
-}
-
-.settings-drawer-header {
-  margin-bottom: 1.25rem;
-}
-
+.settings-drawer.open { transform: translateX(0); }
+.settings-drawer-header { margin-bottom: 1.25rem; }
 .settings-drawer-body {
   display: flex;
   flex-direction: column;
