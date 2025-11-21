@@ -4,79 +4,37 @@ layout: layouts/base.njk
 permalink: "/"
 ---
 
-<section class="py-4">
-  <div class="container">
-    <div class="row g-4">
-      <div class="col-12">
+<section class="py-0">
+  <div class="spectrogram-full">
+    <canvas id="liveSpectrogram" class="live-spectrogram-canvas"></canvas>
+  </div>
+
+  <div class="status-bar" role="status">
+    <div class="status-bar-inner">
+      <button
+        id="settingsToggle"
+        class="btn btn-link settings-toggle-btn"
+        type="button"
+        aria-expanded="false"
+        aria-controls="settingsDrawer"
+        aria-label="Toggle settings"
+      >
+        <i class="bi bi-gear-fill"></i>
+        <span class="visually-hidden">Open settings</span>
+      </button>
+      <div class="status-main">
+        <span class="status-indicator" id="statusIndicator" aria-hidden="true"></span>
+        <span id="statusText" class="status-message">
+          Tap “Listen” to start BirdNET Live. Please allow microphone access.
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="container mt-4">
+    <div class="row justify-content-center">
+      <div class="col-12 col-lg-8">
         <div class="card shadow-sm">
-          <div class="card-body">
-            <h2 class="h6 text-uppercase text-muted mb-2">Live spectrogram</h2>
-            <div id="spectrogram-container">
-              <canvas id="liveSpectrogram" class="live-spectrogram-canvas"></canvas>
-            </div>
-            <p class="mt-2 small text-muted mb-0" id="statusText">
-              Tap “Listen” to start BirdNET Live. Please allow microphone access.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-12 col-lg-6">
-        <div class="card shadow-sm h-100">
-          <div class="card-body">
-            <h2 class="h6 text-uppercase text-muted mb-3">Settings</h2>
-
-            <div class="mb-4">
-              <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="geoToggle" checked>
-                <label class="form-check-label fw-semibold" for="geoToggle">Use geolocation</label>
-              </div>
-              <div class="geo-status" id="geoStatusText">Awaiting geolocation…</div>
-              <div class="geo-status">
-                Coordinates:
-                <span class="fw-semibold" id="geoCoordsText">—</span>
-              </div>
-            </div>
-
-            <div class="settings-grid">
-              <div>
-                <label for="durationRange" class="form-label">Spectrogram duration</label>
-                <input type="range" class="form-range" id="durationRange" min="5" max="60" step="1">
-                <div class="form-text">
-                  Showing <span class="form-range-value" id="durationValue">25&nbsp;s</span>
-                </div>
-              </div>
-
-              <div>
-                <label for="zoomRange" class="form-label">Spectrogram frequency zoom</label>
-                <input type="range" class="form-range" id="zoomRange" min="0.10" max="1.00" step="0.05">
-                <div class="form-text">
-                  Zoom <span class="form-range-value" id="zoomValue">75%</span>
-                </div>
-              </div>
-
-              <div>
-                <label for="gainRange" class="form-label">Spectrogram gain</label>
-                <input type="range" class="form-range" id="gainRange" min="0.5" max="10.0" step="0.1">
-                <div class="form-text">
-                  Gain <span class="form-range-value" id="gainValue">2.5×</span>
-                </div>
-              </div>
-
-              <div>
-                <label for="thresholdRange" class="form-label">Detection threshold</label>
-                <input type="range" class="form-range" id="thresholdRange" min="1" max="99" step="1">
-                <div class="form-text">
-                  Showing confidence ≥ <span class="form-range-value" id="thresholdValue">25%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-12 col-lg-6">
-        <div class="card shadow-sm h-100">
           <div class="card-body d-flex flex-column">
             <h2 class="h6 text-uppercase text-muted mb-2">Detections</h2>
             <div id="detectionsList" class="detections-list flex-grow-1"></div>
@@ -85,9 +43,73 @@ permalink: "/"
       </div>
     </div>
   </div>
+
+  <div id="settingsOverlay" class="settings-overlay" aria-hidden="true"></div>
+  <aside id="settingsDrawer" class="settings-drawer" aria-hidden="true">
+    <div class="settings-drawer-header d-flex justify-content-between align-items-center">
+      <h2 class="h6 text-uppercase text-muted mb-0">Settings</h2>
+      <button type="button" class="btn btn-link text-muted p-0" id="settingsClose" aria-label="Close settings">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="settings-drawer-body">
+      <div class="mb-4">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="geoToggle" checked>
+          <label class="form-check-label fw-semibold" for="geoToggle">Use geolocation</label>
+        </div>
+        <div class="geo-status" id="geoStatusText">Awaiting geolocation…</div>
+        <div class="geo-status">
+          Coordinates:
+          <span class="fw-semibold" id="geoCoordsText">—</span>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+        <div>
+          <label for="durationRange" class="form-label">Spectrogram duration</label>
+          <input type="range" class="form-range" id="durationRange" min="5" max="60" step="1">
+          <div class="form-text">
+            Showing <span class="form-range-value" id="durationValue">25&nbsp;s</span>
+          </div>
+        </div>
+        <div>
+          <label for="zoomRange" class="form-label">Spectrogram frequency zoom</label>
+          <input type="range" class="form-range" id="zoomRange" min="0.10" max="1.00" step="0.05">
+          <div class="form-text">
+            Zoom <span class="form-range-value" id="zoomValue">75%</span>
+          </div>
+        </div>
+        <div>
+          <label for="gainRange" class="form-label">Spectrogram gain</label>
+          <input type="range" class="form-range" id="gainRange" min="0.5" max="10.0" step="0.1">
+          <div class="form-text">
+            Gain <span class="form-range-value" id="gainValue">2.5×</span>
+          </div>
+        </div>
+        <div>
+          <label for="thresholdRange" class="form-label">Detection threshold</label>
+          <input type="range" class="form-range" id="thresholdRange" min="1" max="99" step="1">
+          <div class="form-text">
+            Showing confidence ≥ <span class="form-range-value" id="thresholdValue">25%</span>
+          </div>
+        </div>
+        <div>
+          <label for="inputGainRange" class="form-label">Input gain (model)</label>
+          <input type="range" class="form-range" id="inputGainRange" min="0.5" max="3.0" step="0.1">
+          <div class="form-text">
+            Gain <span class="form-range-value" id="inputGainValue">1.0×</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
 </section>
 
 <button id="recordButton" class="record-btn btn btn-primary btn-lg rounded-pill shadow-lg">
   <span class="record-icon"></span>
-  <span class="record-label">Listen</span>
+  <span class="record-label d-inline-flex align-items-center gap-2">
+    <i class="bi bi-mic-fill"></i>
+    <span class="record-label-text">Listen</span>
+  </span>
 </button>

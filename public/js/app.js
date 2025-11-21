@@ -16,6 +16,7 @@ const WINDOW_SAMPLES = SAMPLE_RATE * WINDOW_SECONDS;
 const INFERENCE_INTERVAL_MS = 1500;
 
 let geolocation = null;
+let geoWatchId = null;
 
 let geoEnabled = true;
 let detectionThreshold = 0.25;
@@ -24,10 +25,15 @@ let inputGain = 1.0;
 
 const statusEl       = () => document.getElementById("statusText");
 const recordButtonEl = () => document.getElementById("recordButton");
-const recordLabelEl  = () => document.querySelector(".record-label");
+const recordLabelTextEl  = () => document.querySelector(".record-label-text");
 const detectionsList = () => document.getElementById("detectionsList");
 const geoStatusEl   = () => document.getElementById("geoStatusText");
 const geoCoordsEl   = () => document.getElementById("geoCoordsText");
+const settingsToggleEl = () => document.getElementById("settingsToggle");
+const settingsDrawerEl = () => document.getElementById("settingsDrawer");
+const settingsOverlayEl = () => document.getElementById("settingsOverlay");
+const statusIndicatorEl = () => document.getElementById("statusIndicator");
+const statusDebugEl = () => document.getElementById("statusDebugInfo");
 
 // --- Spectrogram (d3 magma, simple) ----------
 let spectroCanvas, spectroCtx;
@@ -175,6 +181,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initWorker();
   setupRecordButton();
   initUIControls();
+  setupSettingsToggle();
+  updateStatusIndicator();
   if (geoEnabled) {
     getGeolocation();
   } else {
@@ -289,6 +297,9 @@ function initUIControls() {
     renderDetections();
   }, (v) => `${Math.round(v)}%`);
 
+  bindRange("inputGainRange", inputGain, (value) => {
+    inputGain = value;
+  }, (v) => `${v.toFixed(1)}×`);
 }
 
 function bindRange(id, initialValue, onChange, labelFormatter) {
@@ -311,53 +322,11 @@ function bindRange(id, initialValue, onChange, labelFormatter) {
   });
 }
 
-function updateGeoDisplay(status, coords) {
-  const statusLabel = geoStatusEl();
-  const coordsLabel = geoCoordsEl();
-  if (statusLabel) statusLabel.textContent = status;
-  if (coordsLabel) {
-    if (coords && typeof coords.lat === "number" && typeof coords.lon === "number") {
-      coordsLabel.textContent = `${coords.lat.toFixed(4)}, ${coords.lon.toFixed(4)}`;
-    } else {
-      coordsLabel.textContent = "—";
-    }
-  }
-}
-
-function getGeolocation() {
-  if (!("geolocation" in navigator) || !geoEnabled) {
-    return;
-  }
-  updateGeoDisplay("Requesting geolocation…", null);
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      geolocation = {
-        lat: pos.coords.latitude,
-        lon: pos.coords.longitude
-      };
-      updateGeoDisplay("Geolocation active.", geolocation);
-      if (workerReady && birdnetWorker) {
-        sendAreaScores();
-      }
-      renderDetections();
-    },
-    (err) => {
-      console.warn("Geolocation error", err);
-      geolocation = null;
-      updateGeoDisplay("Geolocation unavailable.", null);
-      renderDetections();
-    },
-    { enableHighAccuracy: false, timeout: 5000 }
-  );
-}
-
-function sendAreaScores() {
-  if (!birdnetWorker || !geolocation) return;
-  birdnetWorker.postMessage({
-    message: "area-scores",
-    latitude: geolocation.lat,
-    longitude: geolocation.lon
-  });
+function updateStatusIndicator() {
+  const indicator = statusIndicatorEl();
+  if (!indicator) return;
+  indicator.classList.toggle("active", isListening);
+  indicator.setAttribute("aria-label", isListening ? "Listening" : "Idle");
 }
 
 // --- Audio graph (mic + buffer) ---------------
@@ -410,11 +379,12 @@ async function startListening() {
   }
   try {
     isListening = true;
+    updateStatusIndicator();
     const button = recordButtonEl();
     if (button) {
       button.classList.add("recording");
     }
-    const label = recordLabelEl();
+    const label = recordLabelTextEl();
     if (label) {
       label.textContent = "Stop";
     }
@@ -434,11 +404,12 @@ async function startListening() {
     console.error(e);
     statusEl().textContent = "Microphone access failed.";
     isListening = false;
+    updateStatusIndicator();
     const button = recordButtonEl();
     if (button) {
       button.classList.remove("recording");
     }
-    const label = recordLabelEl();
+    const label = recordLabelTextEl();
     if (label) {
       label.textContent = "Listen";
     }
@@ -447,11 +418,12 @@ async function startListening() {
 
 function stopListening() {
   isListening = false;
+  updateStatusIndicator();
   const button = recordButtonEl();
   if (button) {
     button.classList.remove("recording");
   }
-  const label = recordLabelEl();
+  const label = recordLabelTextEl();
   if (label) {
     label.textContent = "Listen";
   }
@@ -584,5 +556,118 @@ function renderDetections(pooled) {
       </div>
     `;
     container.appendChild(card);
+  });
+
+}
+
+// --- Settings toggle -------------------------
+
+function setupSettingsToggle() {
+  const toggle = settingsToggleEl();
+  const drawer = settingsDrawerEl();
+  const overlay = settingsOverlayEl();
+  const closeBtn = document.getElementById("settingsClose");
+  if (!toggle || !drawer) return;
+
+  const setState = (open) => {
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    drawer.setAttribute("aria-hidden", open ? "false" : "true");
+    drawer.classList.toggle("open", open);
+    if (overlay) {
+      overlay.classList.toggle("active", open);
+      overlay.setAttribute("aria-hidden", open ? "false" : "true");
+    }
+  };
+
+  setState(false);
+
+  toggle.addEventListener("click", () => {
+    const open = !drawer.classList.contains("open");
+    setState(open);
+  });
+
+  if (overlay) {
+    overlay.addEventListener("click", () => setState(false));
+  }
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => setState(false));
+  }
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      setState(false);
+    }
+  });
+}
+
+// --- Geolocation helpers ---------------------
+
+function updateGeoDisplay(message, coords) {
+  const status = geoStatusEl();
+  const coordsEl = geoCoordsEl();
+  if (status) status.textContent = message;
+  if (coordsEl) {
+    if (coords) {
+      coordsEl.textContent = `${coords.lat.toFixed(4)}, ${coords.lon.toFixed(4)} (±${Math.round(coords.accuracy)}m)`;
+    } else {
+      coordsEl.textContent = "—";
+    }
+  }
+}
+
+function getGeolocation() {
+  if (!navigator.geolocation) {
+    updateGeoDisplay("Geolocation not supported.", null);
+    return;
+  }
+  if (geoWatchId !== null) {
+    navigator.geolocation.clearWatch(geoWatchId);
+    geoWatchId = null;
+  }
+  updateGeoDisplay("Requesting geolocation…", null);
+  geoWatchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      geolocation = {
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+        timestamp: pos.timestamp
+      };
+      updateGeoDisplay("Location acquired.", geolocation);
+      sendAreaScores();
+      renderDetections(); // re-filter with geo prior active
+    },
+    (err) => {
+      console.warn("Geolocation error", err);
+      geolocation = null;
+      updateGeoDisplay("Geolocation failed.", null);
+      renderDetections();
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 15000,
+      timeout: 20000
+    }
+  );
+}
+
+function sendAreaScores() {
+  if (!birdnetWorker || !geolocation) return;
+  const now = new Date();
+  // BirdNET week number (1–52) approximation:
+  const startYear = new Date(now.getFullYear(), 0, 1);
+  const week = Math.min(
+    52,
+    Math.max(
+      1,
+      Math.floor((now - startYear) / (7 * 24 * 60 * 60 * 1000)) + 1
+    )
+  );
+  const hour = now.getUTCHours();
+  birdnetWorker.postMessage({
+    message: "area-scores",
+    lat: geolocation.lat,
+    lon: geolocation.lon,
+    week,
+    hour
   });
 }

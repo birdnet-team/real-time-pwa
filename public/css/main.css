@@ -85,46 +85,82 @@ body {
 }
 
 #statusText {
-  min-height: 2.2em;
+  margin: 0;
+  font-size: inherit;
+  color: inherit;
 }
 
-/* Detections list */
-.detections-list {
-  overflow-y: auto;
-  max-height: 420px;
+.status-bar {
+  background: #212529;
+  color: #e2e8f0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
 }
 
-.detections-list .card {
-  border-radius: 0.75rem;
-  border: 1px solid rgba(148, 163, 184, 0.3);
+.status-bar-inner {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0.1rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem; /* slightly tighter now that gear is inside */
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  justify-content: flex-start; /* align left */
 }
 
-.detections-list .card + .card {
-  margin-top: 0.5rem;
+.status-main {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1 1 260px;
 }
 
-/* Floating record button */
+.status-message {
+  display: inline-flex;
+  align-items: center;
+}
+
+.settings-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  color: #ffffff;
+  text-decoration: none;
+  border: none;
+  outline: none;
+  margin-right: 0.25rem;
+}
+
+.settings-toggle-btn:hover,
+.settings-toggle-btn:focus {
+  color: #0d6efd;
+  text-decoration: none;
+}
+
+.settings-toggle-btn:focus-visible {
+  box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.45);
+  border-radius: 0.35rem;
+}
+
 .record-btn {
   position: fixed;
   left: 50%;
-  bottom: 1.5rem;
   transform: translateX(-50%);
-  padding-inline: 1.6rem;
+  bottom: 1.75rem;
   z-index: 1050;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.75rem;
 }
 
-.record-icon {
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  background-color: #22c55e;
-}
+@media (max-width: 575.98px) {
+  .status-bar-inner {
+    align-items: flex-start;
+  }
 
-.record-btn.recording .record-icon {
-  background-color: #ef4444;
+  .status-debug {
+    flex-basis: 100%;
+  }
 }
 
 /* Make sure there is room at bottom so content isn't hidden */
@@ -135,7 +171,7 @@ main {
 /* Spectrogram (custom) */
 .live-spectrogram-canvas {
   width: 100%;
-  height: 220px;
+  height: 15.0rem;
   display: block;
   background: #000;
   image-rendering: pixelated;
@@ -143,9 +179,40 @@ main {
   cursor: crosshair;
 }
 
+.spectrogram-full {
+  width: 100%;
+  background: #020617;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.spectrogram-full .live-spectrogram-canvas {
+  height: 18rem;
+}
+
+@media (min-width: 992px) {
+  .spectrogram-full .live-spectrogram-canvas {
+    height: 20rem;
+  }
+}
+
+.settings-toggle-btn {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-toggle-btn.active {
+  background-color: #0d6efd;
+  color: #fff;
+  border-color: #0d6efd;
+}
+
 .settings-grid {
   display: grid;
-  gap: 1.5rem;
+  gap: 1.0rem;
 }
 
 @media (min-width: 768px) {
@@ -161,4 +228,55 @@ main {
 .geo-status {
   font-size: 0.875rem;
   color: rgba(148, 163, 184, 0.9);
+}
+
+.container > .row.text-center + .d-flex,
+.container > .row.text-center {
+  margin-bottom: 1.5rem;
+}
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 1040;
+}
+
+.settings-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.settings-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: min(100%, 380px);
+  background: #ffffff;
+  box-shadow: -16px 0 40px rgba(15, 23, 42, 0.2);
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  z-index: 1045;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.settings-drawer.open {
+  transform: translateX(0);
+}
+
+.settings-drawer-header {
+  margin-bottom: 1.25rem;
+}
+
+.settings-drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
