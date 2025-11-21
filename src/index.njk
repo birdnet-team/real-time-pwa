@@ -1,0 +1,93 @@
+---
+title: BirdNET Live – Real-time Bird Sound ID
+layout: layouts/base.njk
+permalink: "/"
+---
+
+<section class="py-4">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h2 class="h6 text-uppercase text-muted mb-2">Live spectrogram</h2>
+            <div id="spectrogram-container">
+              <canvas id="liveSpectrogram" class="live-spectrogram-canvas"></canvas>
+            </div>
+            <p class="mt-2 small text-muted mb-0" id="statusText">
+              Tap “Listen” to start BirdNET Live. Please allow microphone access.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-6">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <h2 class="h6 text-uppercase text-muted mb-3">Settings</h2>
+
+            <div class="mb-4">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="geoToggle" checked>
+                <label class="form-check-label fw-semibold" for="geoToggle">Use geolocation</label>
+              </div>
+              <div class="geo-status" id="geoStatusText">Awaiting geolocation…</div>
+              <div class="geo-status">
+                Coordinates:
+                <span class="fw-semibold" id="geoCoordsText">—</span>
+              </div>
+            </div>
+
+            <div class="settings-grid">
+              <div>
+                <label for="durationRange" class="form-label">Spectrogram duration</label>
+                <input type="range" class="form-range" id="durationRange" min="5" max="60" step="1">
+                <div class="form-text">
+                  Showing <span class="form-range-value" id="durationValue">25&nbsp;s</span>
+                </div>
+              </div>
+
+              <div>
+                <label for="zoomRange" class="form-label">Spectrogram frequency zoom</label>
+                <input type="range" class="form-range" id="zoomRange" min="0.10" max="1.00" step="0.05">
+                <div class="form-text">
+                  Zoom <span class="form-range-value" id="zoomValue">75%</span>
+                </div>
+              </div>
+
+              <div>
+                <label for="gainRange" class="form-label">Spectrogram gain</label>
+                <input type="range" class="form-range" id="gainRange" min="0.5" max="10.0" step="0.1">
+                <div class="form-text">
+                  Gain <span class="form-range-value" id="gainValue">2.5×</span>
+                </div>
+              </div>
+
+              <div>
+                <label for="thresholdRange" class="form-label">Detection threshold</label>
+                <input type="range" class="form-range" id="thresholdRange" min="1" max="99" step="1">
+                <div class="form-text">
+                  Showing confidence ≥ <span class="form-range-value" id="thresholdValue">25%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-6">
+        <div class="card shadow-sm h-100">
+          <div class="card-body d-flex flex-column">
+            <h2 class="h6 text-uppercase text-muted mb-2">Detections</h2>
+            <div id="detectionsList" class="detections-list flex-grow-1"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<button id="recordButton" class="record-btn btn btn-primary btn-lg rounded-pill shadow-lg">
+  <span class="record-icon"></span>
+  <span class="record-label">Listen</span>
+</button>

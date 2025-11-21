@@ -1,0 +1,13 @@
+{
+  "name": "real-time-pwa",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "eleventy",
+    "serve": "eleventy --serve --port=8080",
+    "watch": "eleventy --watch"
+  },
+  "devDependencies": {
+    "@11ty/eleventy": "^3.1.0"
+  }
+}

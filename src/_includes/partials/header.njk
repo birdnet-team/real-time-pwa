@@ -1,0 +1,28 @@
+<header class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container">
+    <a class="navbar-brand fw-semibold d-flex align-items-center gap-2" href="/">
+      <img src="/img/birdnet-logo-circle.png" alt="BirdNET logo" class="navbar-logo">
+      <span>BirdNET Live</span>
+    </a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+            data-bs-target="#mainNav" aria-controls="mainNav"
+            aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <nav class="collapse navbar-collapse" id="mainNav">
+      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link{% if page.url == '/' %} active{% endif %}" href="/">Live</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link{% if page.url == '/about/' %} active{% endif %}" href="/about/">About</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link{% if page.url == '/privacy/' %} active{% endif %}" href="/privacy/">Privacy</a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</header>
