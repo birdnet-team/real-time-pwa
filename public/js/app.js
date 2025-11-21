@@ -17,7 +17,7 @@ let currentStream;
 const SAMPLE_RATE = 48000;
 const WINDOW_SECONDS = 3;
 const WINDOW_SAMPLES = SAMPLE_RATE * WINDOW_SECONDS;
-const INFERENCE_INTERVAL_MS = 1500;
+const INFERENCE_INTERVAL_MS = 1000;
 
 let geolocation = null;
 let geoWatchId = null;
@@ -39,7 +39,6 @@ const geoCoordsEl          = () => document.getElementById("geoCoordsText");
 const settingsToggleEl     = () => document.getElementById("settingsToggle");
 const settingsDrawerEl     = () => document.getElementById("settingsDrawer");
 const settingsOverlayEl    = () => document.getElementById("settingsOverlay");
-const statusIndicatorEl    = () => document.getElementById("statusIndicator");
 const statusDebugEl        = () => document.getElementById("statusDebugInfo"); // optional (may not exist)
 
 /* -------------------------------------------------
@@ -71,7 +70,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setupRecordButton();
   initUIControls();
   setupSettingsToggle();
-  updateStatusIndicator();
   if (geoEnabled) {
     getGeolocation();
   } else {
@@ -190,16 +188,6 @@ function bindRange(id, initialValue, onChange, format) {
     onChange(val, input);
     setLabel(val);
   });
-}
-
-/* -------------------------------------------------
- * Status indicator
- * ------------------------------------------------- */
-function updateStatusIndicator() {
-  const indicator = statusIndicatorEl();
-  if (!indicator) return;
-  indicator.classList.toggle("active", isListening);
-  indicator.setAttribute("aria-label", isListening ? "Listening" : "Idle");
 }
 
 /* -------------------------------------------------
@@ -343,7 +331,6 @@ async function startListening() {
   }
   try {
     isListening = true;
-    updateStatusIndicator();
     const button = recordButtonEl();
     if (button) button.classList.add("recording");
     const label = recordLabelTextEl();
@@ -361,27 +348,25 @@ async function startListening() {
     });
 
     setupAudioGraphFromStream(currentStream);
-    statusEl().textContent = "Listening… analysing audio with BirdNET.";
+    statusEl().textContent = "Listening…";
   } catch (e) {
     console.error(e);
     statusEl().textContent = "Microphone access failed.";
     isListening = false;
-    updateStatusIndicator();
     const button = recordButtonEl();
     if (button) button.classList.remove("recording");
     const label = recordLabelTextEl();
-    if (label) label.textContent = "Listen";
+    if (label) label.textContent = "Start";
   }
 }
 
 function stopListening() {
   isListening = false;
-  updateStatusIndicator();
   const button = recordButtonEl();
   if (button) button.classList.remove("recording");
   const label = recordLabelTextEl();
-  if (label) label.textContent = "Listen";
-  statusEl().textContent = "Stopped. Spectrogram frozen.";
+  if (label) label.textContent = "Start";
+  statusEl().textContent = "Stopped. Tap Listen to start.";
 
   if (currentStream) {
     currentStream.getTracks().forEach(t => t.stop());
@@ -431,8 +416,12 @@ function startInferenceLoop() {
     if (!isListening || !workerReady || !circularBuffer || !birdnetWorker) return;
     const windowed = getCurrentWindow();
     if (windowed) {
+      const geoCtx = geolocation ? {
+        latitude: geolocation.lat,
+        longitude: geolocation.lon
+      } : {};
       birdnetWorker.postMessage(
-        { message: "predict", pcmAudio: windowed, overlapSec: 1.5 },
+        { message: "predict", pcmAudio: windowed, overlapSec: 1.5, ...geoCtx },
         [windowed.buffer]
       );
     }
@@ -462,39 +451,40 @@ function renderDetections(pooled) {
   if (!container) return;
 
   const useGeoFilter = geoEnabled && !!geolocation;
-  const source = latestDetections || [];
+  const all = latestDetections || [];
 
-  const normalized = source.map((p) => {
-    const geo = typeof p.geoscore === "number" ? p.geoscore : null;
-    const meetsGeo = !useGeoFilter || (geo !== null && geo > 0.05);
-    return {
-      item: p,
-      geo,
-      displayConfidence: meetsGeo ? p.confidence : 0
-    };
-  });
+  // Binary geo filter: if geo is active and we have a fix,
+  // drop any species with geoscore < 0.05 (5%) or missing.
+  const afterGeo = useGeoFilter
+    ? all.filter(p => typeof p.geoscore === "number" && p.geoscore >= 0.05)
+    : all;
 
-  const filtered = normalized.filter((e) => e.displayConfidence >= detectionThreshold);
-  const sorted = filtered
-    .sort((a, b) => b.displayConfidence - a.displayConfidence)
+  // Apply audio confidence threshold after geo filtering.
+  const afterAudio = afterGeo.filter(p => p.confidence >= detectionThreshold);
+
+  // Sort and cap.
+  const top = afterAudio
+    .sort((a, b) => b.confidence - a.confidence)
     .slice(0, 20);
 
   container.innerHTML = "";
 
-  if (!sorted.length) {
+  if (!top.length) {
     container.innerHTML = `
       <div class="text-muted small">
         No detections above ${Math.round(detectionThreshold * 100)}% confidence yet.
-        Adjust the threshold or keep listening.
+        ${useGeoFilter ? "Geo filter may be hiding low geo-score species." : "Keep listening or lower the threshold."}
       </div>
     `;
     return;
   }
 
-  sorted.forEach(({ item, geo, displayConfidence }) => {
-    const confPct = (displayConfidence * 100).toFixed(1);
-    const geoInfo = useGeoFilter && geo !== null ? ` · Geo prior: ${(geo * 100).toFixed(1)}%` : "";
-    const name = item.nameI18n || item.name || `Class ${item.index}`;
+  top.forEach(p => {
+    const confPct = (p.confidence * 100).toFixed(1);
+    const geoInfo = useGeoFilter && typeof p.geoscore === "number"
+      ? ` · Geo score: ${(p.geoscore * 100).toFixed(1)}%`
+      : "";
+    const name = p.nameI18n || p.name || `Class ${p.index}`;
 
     const card = document.createElement("div");
     card.className = "card";
@@ -617,11 +607,11 @@ function sendAreaScores() {
       Math.floor((now - startYear) / (7 * 24 * 60 * 60 * 1000)) + 1
     )
   );
-  const hour = now.getUTCHours();
+  const hour = now.getHours(); // local hour
   birdnetWorker.postMessage({
     message: "area-scores",
-    lat: geolocation.lat,
-    lon: geolocation.lon,
+    latitude: geolocation.lat,    // renamed
+    longitude: geolocation.lon,   // renamed
     week,
     hour
   });

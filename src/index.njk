@@ -9,24 +9,23 @@ permalink: "/"
     <canvas id="liveSpectrogram" class="live-spectrogram-canvas"></canvas>
   </div>
 
-  <div class="status-bar" role="status">
-    <div class="status-bar-inner">
-      <button
-        id="settingsToggle"
-        class="btn btn-link settings-toggle-btn"
-        type="button"
-        aria-expanded="false"
-        aria-controls="settingsDrawer"
-        aria-label="Toggle settings"
-      >
-        <i class="bi bi-gear-fill"></i>
-        <span class="visually-hidden">Open settings</span>
-      </button>
-      <div class="status-main">
-        <span class="status-indicator" id="statusIndicator" aria-hidden="true"></span>
-        <span id="statusText" class="status-message">
+  <div class="status-bar bg-dark border-bottom" role="status">
+    <div class="container">
+      <div class="d-flex align-items-center py-2">
+        <button
+          id="settingsToggle"
+          class="btn btn-link p-0 text-light"
+          type="button"
+          aria-expanded="false"
+          aria-controls="settingsDrawer"
+          aria-label="Toggle settings"
+        >
+          <i class="bi bi-gear-fill fs-5"></i>
+          <span class="visually-hidden">Open settings</span>
+        </button>
+        <p id="statusText" class="mb-0 ms-3 flex-grow-1">
           Tap “Listen” to start BirdNET Live. Please allow microphone access.
-        </span>
+        </p>
       </div>
     </div>
   </div>
@@ -110,6 +109,6 @@ permalink: "/"
   <span class="record-icon"></span>
   <span class="record-label d-inline-flex align-items-center gap-2">
     <i class="bi bi-mic-fill"></i>
-    <span class="record-label-text">Listen</span>
+    <span class="record-label-text">Start</span>
   </span>
 </button>

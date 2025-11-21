@@ -9,75 +9,23 @@ body {
 
 .navbar-logo { height: 32px; width: auto; }
 
-/* Hero */
-.hero-landing {
-  position: relative;
-  padding: 5rem 0 4rem;
-  color: #fff;
-  background-image: url("/img/hero-placeholder.jpg");
-  background-size: cover;
-  background-position: center;
-  border-bottom-left-radius: 1.5rem;
-  border-bottom-right-radius: 1.5rem;
-  overflow: hidden;
-}
-.hero-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(6,14,26,0.9), rgba(15,76,129,0.9));
-}
-.hero-landing-content { position: relative; z-index: 1; }
-.hero-title { font-size: clamp(2.4rem, 4vw, 3.2rem); font-weight: 650; }
-.hero-subtitle { font-size: clamp(1.1rem, 2.2vw, 1.3rem); max-width: 40rem; }
-
-/* Page header */
-.page-header { padding-top: 3rem; padding-bottom: 1.5rem; }
-.page-title { font-size: clamp(2rem, 3vw, 2.4rem); font-weight: 650; }
-
-/* Spectrogram container */
-#spectrogram-container {
-  position: relative;
-  background: #020617;
-  border-radius: 0.75rem;
-  overflow: hidden;
-  border: 1px solid rgba(148,163,184,0.4);
-}
-.spectrogram-wave,
-.spectrogram-view { height: 140px; }
-@media (min-width: 768px) {
-  .spectrogram-wave { height: 100px; }
-  .spectrogram-view { height: 160px; }
-}
-
-/* Status bar */
-#statusText { margin: 0; font-size: inherit; color: inherit; }
+/* Status bar minimalist */
 .status-bar {
-  background: #212529;
-  color: #e2e8f0;
-  border-bottom: 1px solid rgba(148,163,184,0.25);
+  background: #121416;
+  color: #d6d9dd;
+  border-bottom: 1px solid #1e2226;
 }
-.status-bar-inner {
-  width: 100%;
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 0.1rem 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+.status-bar #statusText {
   font-size: 0.85rem;
-  line-height: 1.3;
-  justify-content: flex-start;
+  line-height: 1.2;
 }
-.status-main {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex: 1 1 260px;
+.status-bar .btn-link {
+  color: #d6d9dd;
 }
-.status-message {
-  display: inline-flex;
-  align-items: center;
+.status-bar .btn-link:hover,
+.status-bar .btn-link:focus {
+  color: #0d6efd;
+  text-decoration: none;
 }
 
 /* Settings toggle (single consolidated block) */
@@ -115,9 +63,20 @@ body {
   z-index: 1050;
 }
 
-@media (max-width: 575.98px) {
-  .status-bar-inner { align-items: flex-start; }
-  .status-debug { flex-basis: 100%; }
+/* Add recording (listening) state */
+.record-btn.recording {
+  background-color: #dc3545;
+  border-color: #dc3545;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+.record-btn.recording:hover,
+.record-btn.recording:focus {
+  background-color: #bb2d3b;
+  border-color: #b02a37;
+}
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(220,53,69,0.55); }
+  50% { box-shadow: 0 0 0 0.75rem rgba(220,53,69,0); }
 }
 
 /* Ensure bottom space for button */
@@ -130,13 +89,11 @@ main { padding-bottom: 4.5rem; }
   display: block;
   background: #000;
   image-rendering: pixelated;
-  border-radius: 0.5rem;
   cursor: crosshair;
 }
 .spectrogram-full {
   width: 100%;
   background: #020617;
-  border-bottom: 1px solid rgba(148,163,184,0.4);
 }
 .spectrogram-full .live-spectrogram-canvas { height: 18rem; }
 @media (min-width: 992px) {
