@@ -104,7 +104,8 @@ let currentLabelLang = browserLangCode;
 
 let geolocation = null;
 let geoWatchId = null;
-let geoEnabled = true;
+// Load initial state from storage (default true)
+let geoEnabled = localStorage.getItem("birdnet_geo_enabled") !== "false";
 
 let detectionThreshold = 0.25;
 let latestDetections = [];
@@ -168,12 +169,24 @@ document.addEventListener("DOMContentLoaded", () => {
     setupRecordButton();
   }
 
+  // On Explore page, respect the current geoEnabled state.
+  // If disabled, do NOT auto-enable. Just show status.
   if (geoEnabled) {
     getGeolocation();
   } else {
     updateGeoDisplay("Geolocation disabled.", null);
-    // If on explore page and geo disabled, request list (will show all/default)
-    if (isExplore) requestSpeciesList();
+    if (isExplore) {
+      // Show hint instead of full list if geo is off
+      const container = document.getElementById("exploreList");
+      if (container) {
+        container.innerHTML = `
+          <div class="col-12 text-center py-5 text-muted">
+            <i class="bi bi-geo-alt-slash fs-1 d-block mb-3 opacity-25"></i>
+            <p>Enable geolocation in Settings to see local species.</p>
+          </div>
+        `;
+      }
+    }
   }
 });
 
@@ -270,13 +283,24 @@ function renderExploreList(list) {
   const container = document.getElementById("exploreList");
   if (!container || !list) return;
 
+  // Guard: If no geolocation, do not render the massive list
+  if (!geolocation || !geoEnabled) {
+    container.innerHTML = `
+      <div class="col-12 text-center py-5 text-muted">
+        <i class="bi bi-geo-alt-slash fs-1 d-block mb-3 opacity-25"></i>
+        <p>Enable geolocation in Settings to see local species.</p>
+      </div>
+    `;
+    return;
+  }
+
   // Filter and sort
   // If geo is enabled, sort by geoscore. If disabled, maybe alphabetical?
   // Default to geoscore desc
   const sorted = list
-    .filter(item => item.geoscore > 0.01) // Hide extremely unlikely
+    .filter(item => item.geoscore > 0.05) // Hide extremely unlikely
     .sort((a, b) => b.geoscore - a.geoscore)
-    .slice(0, 100); // Limit to top 100
+    //.slice(0, 100); // Limit to top 100
 
   container.innerHTML = "";
   
@@ -324,13 +348,31 @@ function initUIControls() {
     geoToggle.checked = geoEnabled;
     geoToggle.addEventListener("change", () => {
       geoEnabled = geoToggle.checked;
+      localStorage.setItem("birdnet_geo_enabled", geoEnabled); // Persist setting
+
       if (geoEnabled) {
         updateGeoDisplay("Requesting geolocation…", null);
         getGeolocation();
       } else {
         geolocation = null;
+        if (geoWatchId !== null) {
+          navigator.geolocation.clearWatch(geoWatchId);
+          geoWatchId = null;
+        }
         updateGeoDisplay("Geolocation disabled.", null);
-        renderDetections();
+        
+        // Handle Explore page state change
+        if (document.getElementById("exploreList")) {
+           const container = document.getElementById("exploreList");
+           container.innerHTML = `
+            <div class="col-12 text-center py-5 text-muted">
+              <i class="bi bi-geo-alt-slash fs-1 d-block mb-3 opacity-25"></i>
+              <p>Enable geolocation in Settings to see local species.</p>
+            </div>
+          `;
+        } else {
+          renderDetections();
+        }
       }
     });
   }
