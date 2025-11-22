@@ -20,13 +20,21 @@ const INFERENCE_INTERVAL_MS = 500;
 const TEMPORAL_POOL_WINDOW = 5;
 const USE_TEMPORAL_POOL = true;
 
+// Storage helpers
+const store = {
+  get: (k, def) => localStorage.getItem(k) ?? def,
+  getFloat: (k, def) => { const v = localStorage.getItem(k); return v === null ? def : parseFloat(v); },
+  getBool: (k, def) => { const v = localStorage.getItem(k); return v === null ? def : v === "true"; },
+  set: (k, v) => localStorage.setItem(k, v)
+};
+
 // Spectrogram frequency range + colormap
 const SPECTRO_MIN_FREQ_DEFAULT = 0;
 const SPECTRO_MAX_FREQ_DEFAULT = 12000;
-let spectroMinFreq = SPECTRO_MIN_FREQ_DEFAULT;
-let spectroMaxFreq = SPECTRO_MAX_FREQ_DEFAULT;
-let colormapName = "viridis";
-let colormapFn = d3.interpolateViridis;
+let spectroMinFreq = store.getFloat("bn_spec_min_freq", SPECTRO_MIN_FREQ_DEFAULT);
+let spectroMaxFreq = store.getFloat("bn_spec_max_freq", SPECTRO_MAX_FREQ_DEFAULT);
+let colormapName = store.get("bn_colormap", "viridis");
+let colormapFn = d3.interpolateViridis; // updated in init
 
 // Label language selection (must match worker supported list) - now with display names
 const LANG_LABELS = {
@@ -100,16 +108,16 @@ function mapBrowserLangToLabelLang(locale) {
 }
 
 const browserLangCode = mapBrowserLangToLabelLang(navigator.language);
-let currentLabelLang = browserLangCode;
+let currentLabelLang = store.get("bn_lang", browserLangCode);
 
 let geolocation = null;
 let geoWatchId = null;
 // Load initial state from storage (default true)
-let geoEnabled = localStorage.getItem("birdnet_geo_enabled") !== "false";
+let geoEnabled = store.getBool("bn_geo_enabled", true);
 
-let detectionThreshold = 0.25;
+let detectionThreshold = store.getFloat("bn_threshold", 0.25);
 let latestDetections = [];
-let inputGain = 1.0;
+let inputGain = store.getFloat("bn_input_gain", 1.0);
 // Inference timing
 let lastInferenceStart = 0;
 let lastInferenceMs = null;
@@ -143,11 +151,11 @@ const SPECTRO_DEFAULT_GAIN = 1.5;
 const SPECTRO_OUTPUT_GAMMA = 0.8;
 const SPECTRO_SMOOTHING = 0.0; // No smoothing for crisp details
 
-let spectroMinDb = -120;     // Floor for silence
-let spectroMaxDb = -40;      // Ceiling for loud sounds
+let spectroMinDb = store.getFloat("bn_spec_min_db", -120);
+let spectroMaxDb = store.getFloat("bn_spec_max_db", -40);
 
-let spectroDurationSec = SPECTRO_DEFAULT_DURATION_SEC;
-let spectroGain = SPECTRO_DEFAULT_GAIN;
+let spectroDurationSec = store.getFloat("bn_spec_duration", SPECTRO_DEFAULT_DURATION_SEC);
+let spectroGain = store.getFloat("bn_spec_gain", SPECTRO_DEFAULT_GAIN);
 let spectroColumnSeconds = 0;
 let lastSpectroColumnTime = 0;
 
@@ -155,6 +163,9 @@ let lastSpectroColumnTime = 0;
  * Boot
  * ------------------------------------------------- */
 document.addEventListener("DOMContentLoaded", () => {
+  // Apply initial colormap
+  updateColormap(colormapName);
+  
   const isLive = !!document.getElementById("recordButton");
   const isExplore = !!document.getElementById("exploreList");
 
@@ -348,7 +359,7 @@ function initUIControls() {
     geoToggle.checked = geoEnabled;
     geoToggle.addEventListener("change", () => {
       geoEnabled = geoToggle.checked;
-      localStorage.setItem("birdnet_geo_enabled", geoEnabled); // Persist setting
+      store.set("bn_geo_enabled", geoEnabled); // Persist setting
 
       if (geoEnabled) {
         updateGeoDisplay("Requesting geolocation…", null);
@@ -382,42 +393,43 @@ function initUIControls() {
     if (spectroCanvas && spectroCanvas.width > 0) {
       spectroColumnSeconds = spectroDurationSec / spectroCanvas.width;
     }
-  }, (v) => `${v}s`);
+  }, (v) => `${v}s`, "bn_spec_duration");
 
   bindRange("gainRange", spectroGain, (v) => {
     spectroGain = v;
-  }, (v) => `${v.toFixed(1)}×`);
+  }, (v) => `${v.toFixed(1)}×`, "bn_spec_gain");
 
   bindRange("thresholdRange", detectionThreshold * 100, (v) => {
     detectionThreshold = v / 100;
     renderDetections();
-  }, (v) => `${Math.round(v)}%`);
+  }, (v) => `${Math.round(v)}%`, "bn_threshold");
 
   bindRange("inputGainRange", inputGain, (v) => {
     inputGain = v;
-  }, (v) => `${v.toFixed(1)}×`);
+  }, (v) => `${v.toFixed(1)}×`, "bn_input_gain");
 
   bindRange("minFreqRange", spectroMinFreq, (v) => {
     spectroMinFreq = Math.min(v, spectroMaxFreq - 100);
-  }, (v) => `${Math.round(v)} Hz`);
+  }, (v) => `${Math.round(v)} Hz`, "bn_spec_min_freq");
 
   bindRange("maxFreqRange", spectroMaxFreq, (v) => {
     spectroMaxFreq = Math.max(v, spectroMinFreq + 100);
-  }, (v) => `${Math.round(v)} Hz`);
+  }, (v) => `${Math.round(v)} Hz`, "bn_spec_max_freq");
 
   bindRange("minDbRange", spectroMinDb, (v) => {
     spectroMinDb = Math.min(v, spectroMaxDb - 10);
-  }, (v) => `${v} dB`);
+  }, (v) => `${v} dB`, "bn_spec_min_db");
 
   bindRange("maxDbRange", spectroMaxDb, (v) => {
     spectroMaxDb = Math.max(v, spectroMinDb + 10);
-  }, (v) => `${v} dB`);
+  }, (v) => `${v} dB`, "bn_spec_max_db");
 
   const colormapSelect = document.getElementById("colormapSelect");
   if (colormapSelect) {
     colormapSelect.value = colormapName;
     colormapSelect.addEventListener("change", () => {
       colormapName = colormapSelect.value;
+      store.set("bn_colormap", colormapName);
       updateColormap(colormapName);
     });
   }
@@ -433,6 +445,7 @@ function initUIControls() {
       .join("");
     langSelect.addEventListener("change", () => {
       currentLabelLang = langSelect.value;
+      store.set("bn_lang", currentLabelLang);
       latestDetections = [];
       renderDetections([]);
       statusEl().textContent = "Reloading model for language…";
@@ -443,7 +456,7 @@ function initUIControls() {
   }
 }
 
-function bindRange(id, initialValue, onChange, format) {
+function bindRange(id, initialValue, onChange, format, storageKey) {
   const input = document.getElementById(id);
   const label = document.querySelector(`[id='${id.replace("Range", "Value")}']`);
   if (!input) return;
@@ -458,6 +471,7 @@ function bindRange(id, initialValue, onChange, format) {
     const val = parseFloat(input.value);
     onChange(val, input);
     setLabel(val);
+    if (storageKey) store.set(storageKey, val);
   });
 }
 
