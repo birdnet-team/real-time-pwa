@@ -1,7 +1,7 @@
 {
-  "name": "BirdNET RT",
-  "short_name": "BirdNET RT",
-  "start_url": "/",
+  "name": "BirdNET Live",
+  "short_name": "BirdNET Live",
+  "start_url": "/real-time-pwa/",
   "display": "standalone",
   "background_color": "#0b1728",
   "theme_color": "#0b1728",
