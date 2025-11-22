@@ -22,7 +22,7 @@ const USE_TEMPORAL_POOL = true;
 
 // Spectrogram frequency range + colormap
 const SPECTRO_MIN_FREQ_DEFAULT = 0;
-const SPECTRO_MAX_FREQ_DEFAULT = 12000;
+const SPECTRO_MAX_FREQ_DEFAULT = 10000;
 let spectroMinFreq = SPECTRO_MIN_FREQ_DEFAULT;
 let spectroMaxFreq = SPECTRO_MAX_FREQ_DEFAULT;
 let colormapName = "viridis";

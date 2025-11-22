@@ -16,8 +16,8 @@ body {
   border-bottom: 1px solid #1e2226;
 }
 .status-bar #statusText {
-  font-size: 0.85rem;
-  line-height: 1.2;
+  font-size: 0.75rem;
+  line-height: 1.0;
 }
 .status-bar .btn-link {
   color: #d6d9dd;
@@ -59,7 +59,7 @@ body {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 1.75rem;
+  bottom: 3.0rem;
   z-index: 1050;
 }
 
@@ -85,7 +85,7 @@ main { padding-bottom: 4.5rem; }
 /* Live spectrogram canvas */
 .live-spectrogram-canvas {
   width: 100%;
-  height: 15rem;
+  height: 35vh; 
   display: block;
   background: #000;
   image-rendering: pixelated;
@@ -95,9 +95,9 @@ main { padding-bottom: 4.5rem; }
   width: 100%;
   background: #020617;
 }
-.spectrogram-full .live-spectrogram-canvas { height: 18rem; }
+.spectrogram-full .live-spectrogram-canvas { height: 35vh; }
 @media (min-width: 992px) {
-  .spectrogram-full .live-spectrogram-canvas { height: 20rem; }
+  .spectrogram-full .live-spectrogram-canvas { height: 35vh; }
 }
 
 /* Settings layout */
