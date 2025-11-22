@@ -2,7 +2,6 @@
 .DS_Store
 Thumbs.db
 node_modules/
-package-lock.json
 yarn.lock
 _site/
 dist/
