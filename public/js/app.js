@@ -551,7 +551,7 @@ function stopListening() {
   if (button) button.classList.remove("recording");
   const label = recordLabelTextEl();
   if (label) label.textContent = "Start";
-  statusEl().textContent = "Stopped. Spectrogram frozen.";
+  statusEl().textContent = "Stopped. Click 'Start' to resume.";
 
   lastInferenceStart = 0;
   lastInferenceMs = null;
