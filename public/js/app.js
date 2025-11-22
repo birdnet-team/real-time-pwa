@@ -142,8 +142,8 @@ const SPECTRO_DEFAULT_GAIN = 1.5;
 const SPECTRO_OUTPUT_GAMMA = 0.8;
 const SPECTRO_SMOOTHING = 0.0; // No smoothing for crisp details
 
-let spectroMinDb = -100;     // Floor for silence
-let spectroMaxDb = -30;      // Ceiling for loud sounds
+let spectroMinDb = -120;     // Floor for silence
+let spectroMaxDb = -40;      // Ceiling for loud sounds
 
 let spectroDurationSec = SPECTRO_DEFAULT_DURATION_SEC;
 let spectroGain = SPECTRO_DEFAULT_GAIN;
@@ -195,7 +195,7 @@ function initWorker(langOverride) {
         break;
       case "loaded":
         workerReady = true;
-        statusEl().textContent = "Model ready. Tap Listen to start.";
+        statusEl().textContent = "Model ready. Tap 'Start' to record.";
         if (geolocation) sendAreaScores();
         break;
       case "predict_debug":
@@ -551,7 +551,7 @@ function stopListening() {
   if (button) button.classList.remove("recording");
   const label = recordLabelTextEl();
   if (label) label.textContent = "Start";
-  statusEl().textContent = "Stopped. Click 'Start' to resume.";
+  statusEl().textContent = "Stopped. Tap 'Start' to resume.";
 
   lastInferenceStart = 0;
   lastInferenceMs = null;
@@ -825,10 +825,16 @@ function releaseWakeLock() {
   }
 }
 
+// Stop listening when tab is hidden or page is unloaded
 document.addEventListener("visibilitychange", () => {
-  // Re-acquire after tab returns
-  if (document.visibilityState === "visible" && isListening && wakeLockRequested && !wakeLock) {
-    requestWakeLock();
+  if (document.visibilityState === "hidden" && isListening) {
+    stopListening();
+  }
+});
+
+window.addEventListener("pagehide", () => {
+  if (isListening) {
+    stopListening();
   }
 });
 
