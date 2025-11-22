@@ -1,5 +1,4 @@
 // BirdNET Live main client script
-// NOTE: Refactor only; logic preserved. Added comments, grouped sections, minor style consistency.
 
 /* -------------------------------------------------
  * Global state
@@ -17,7 +16,9 @@ let currentStream;
 const SAMPLE_RATE = 48000;
 const WINDOW_SECONDS = 3;
 const WINDOW_SAMPLES = SAMPLE_RATE * WINDOW_SECONDS;
-const INFERENCE_INTERVAL_MS = 1000;
+const INFERENCE_INTERVAL_MS = 500;
+const TEMPORAL_POOL_WINDOW = 5;      // number of recent inference result sets
+const USE_TEMPORAL_POOL = true;      // toggle pooling
 
 let geolocation = null;
 let geoWatchId = null;
@@ -26,9 +27,13 @@ let geoEnabled = true;
 let detectionThreshold = 0.25;
 let latestDetections = [];
 let inputGain = 1.0;
+// Inference timing
+let lastInferenceStart = 0;
+let lastInferenceMs = null;
+let recentInferenceSets = []; // holds last N "pooled" arrays
 
 /* -------------------------------------------------
- * DOM accessors (lazy lookups)
+ * DOM accessors
  * ------------------------------------------------- */
 const statusEl             = () => document.getElementById("statusText");
 const recordButtonEl       = () => document.getElementById("recordButton");
@@ -39,7 +44,6 @@ const geoCoordsEl          = () => document.getElementById("geoCoordsText");
 const settingsToggleEl     = () => document.getElementById("settingsToggle");
 const settingsDrawerEl     = () => document.getElementById("settingsDrawer");
 const settingsOverlayEl    = () => document.getElementById("settingsOverlay");
-const statusDebugEl        = () => document.getElementById("statusDebugInfo"); // optional (may not exist)
 
 /* -------------------------------------------------
  * Spectrogram config
@@ -112,7 +116,21 @@ function initWorker() {
         // Per-segment data (not visualized yet)
         break;
       case "pooled":
-        renderDetections(data.pooled);
+        // Store latest pooled predictions
+        if (Array.isArray(data.pooled)) {
+          recentInferenceSets.push(data.pooled);
+          if (recentInferenceSets.length > TEMPORAL_POOL_WINDOW) {
+            recentInferenceSets.shift();
+          }
+        }
+        const toRender = USE_TEMPORAL_POOL
+          ? computeTemporalPooledDetections(recentInferenceSets)
+          : data.pooled;
+        renderDetections(toRender);
+        if (isListening && lastInferenceStart) {
+          lastInferenceMs = Math.round(performance.now() - lastInferenceStart);
+          statusEl().textContent = `Listening… (Inference took ${lastInferenceMs} ms)`;
+        }
         break;
       case "area-scores":
         // Geo priors updated; worker handles refresh
@@ -338,6 +356,8 @@ async function startListening() {
     if (label) label.textContent = "Stop";
     statusEl().textContent = "Requesting microphone access…";
 
+    await requestWakeLock();
+
     currentStream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
@@ -363,11 +383,15 @@ async function startListening() {
 
 function stopListening() {
   isListening = false;
+  releaseWakeLock();
   const button = recordButtonEl();
   if (button) button.classList.remove("recording");
   const label = recordLabelTextEl();
   if (label) label.textContent = "Start";
-  statusEl().textContent = "Stopped. Tap Listen to start.";
+  statusEl().textContent = "Stopped. Spectrogram frozen.";
+
+  lastInferenceStart = 0;
+  lastInferenceMs = null;
 
   if (currentStream) {
     currentStream.getTracks().forEach(t => t.stop());
@@ -421,6 +445,7 @@ function startInferenceLoop() {
         latitude: geolocation.lat,
         longitude: geolocation.lon
       } : {};
+      lastInferenceStart = performance.now();
       birdnetWorker.postMessage(
         { message: "predict", pcmAudio: windowed, overlapSec: 1.5, ...geoCtx },
         [windowed.buffer]
@@ -616,4 +641,87 @@ function sendAreaScores() {
     week,
     hour
   });
+}
+
+/* -------------------------------------------------
+ * Wake Lock API (screen on while listening)
+ * ------------------------------------------------- */
+let wakeLock = null;
+let wakeLockRequested = false;
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLockRequested = true;
+    wakeLock.addEventListener('release', () => {
+      wakeLock = null;
+      wakeLockRequested = false;
+    });
+  } catch (e) {
+    console.warn("Wake Lock request failed:", e);
+  }
+}
+
+function releaseWakeLock() {
+  if (wakeLock) {
+    wakeLock.release().catch(()=>{});
+    wakeLock = null;
+    wakeLockRequested = false;
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  // Re-acquire after tab returns
+  if (document.visibilityState === "visible" && isListening && wakeLockRequested && !wakeLock) {
+    requestWakeLock();
+  }
+});
+
+/* -------------------------------------------------
+ * Temporal pooling (log-mean-exp over logits)
+ * ------------------------------------------------- */
+function computeTemporalPooledDetections(sets) {
+  if (!sets || !sets.length) return [];
+  if (sets.length === 1) return sets[0];
+
+  const eps = 1e-8;
+  // Map class index -> array of confidences + reference object (latest)
+  const byIndex = new Map();
+  for (let s = 0; s < sets.length; s++) {
+    for (const det of sets[s]) {
+      const idx = det.index;
+      if (!byIndex.has(idx)) {
+        byIndex.set(idx, { samples: [], ref: det });
+      }
+      byIndex.get(idx).samples.push(det.confidence);
+    }
+  }
+
+  const pooled = [];
+  for (const [idx, entry] of byIndex.entries()) {
+    const samples = entry.samples;
+    // Convert confidences to logits
+    const logits = samples.map(c => {
+      const clipped = Math.min(1 - eps, Math.max(eps, c));
+      return Math.log(clipped / (1 - clipped));
+    });
+    // log-mean-exp pooling on logits
+    const maxLogit = Math.max(...logits);
+    const sumExp = logits.reduce((acc, l) => acc + Math.exp(l - maxLogit), 0);
+    const lme = maxLogit + Math.log(sumExp / logits.length);
+    // Back to probability
+    const pooledConf = 1 / (1 + Math.exp(-lme));
+
+    // Copy reference detection, override confidence
+    const base = entry.ref;
+    pooled.push({
+      ...base,
+      confidence: pooledConf
+    });
+  }
+
+  // Optional: sort by pooled confidence descending
+  pooled.sort((a, b) => b.confidence - a.confidence);
+  return pooled;
 }
