@@ -94,11 +94,14 @@ async function main() {
   catch { birdsListI18n = birdsList; }
 
   const birds = birdsList.map((base, i) => {
-    const loc = birdsListI18n[i] || base;
+    const i18nLine = birdsListI18n[i] || base;
+    const [sciBase, comBase] = base.split('_');
+    const [sciLoc, comLoc] = i18nLine.split('_');
     return {
       geoscore: 1,
-      name: base.split('_')[1] || base,
-      nameI18n: loc.split('_')[1] || base
+      scientificName: sciBase || base,
+      commonName: comBase || base,
+      commonNameI18n: comLoc || comBase || base
     };
   });
 
@@ -172,9 +175,10 @@ async function main() {
         const preds = predictionList[f].map((conf,i)=> ({
           index: i,
           confidence: conf,
-          geoscore: birds[i].geoscore,
-          name: birds[i].name,
-          nameI18n: birds[i].nameI18n
+            geoscore: birds[i].geoscore,
+          scientificName: birds[i].scientificName,
+          commonName: birds[i].commonName,
+          commonNameI18n: birds[i].commonNameI18n
         }));
         segments.push({ start: startSec, end: endSec, preds });
       }
@@ -192,8 +196,9 @@ async function main() {
 
       const pooled = lastMeans.map((m, i) => ({
         index: i,
-        name: birds[i].name,
-        nameI18n: birds[i].nameI18n,
+        scientificName: birds[i].scientificName,
+        commonName: birds[i].commonName,
+        commonNameI18n: birds[i].commonNameI18n,
         confidence: m,
         geoscore: birds[i].geoscore
       }));
@@ -223,8 +228,9 @@ async function main() {
             index: i,
             confidence: conf,
             geoscore: birds[i].geoscore,
-            name: birds[i].name,
-            nameI18n: birds[i].nameI18n
+            scientificName: birds[i].scientificName,
+            commonName: birds[i].commonName,
+            commonNameI18n: birds[i].commonNameI18n
           }));
           segments.push({ start: startSec, end: endSec, preds });
         }
@@ -235,8 +241,9 @@ async function main() {
       if (lastMeans) {
         const pooled = lastMeans.map((m, i) => ({
           index: i,
-          name: birds[i].name,
-          nameI18n: birds[i].nameI18n,
+          scientificName: birds[i].scientificName,
+          commonName: birds[i].commonName,
+          commonNameI18n: birds[i].commonNameI18n,
           confidence: m,
           geoscore: birds[i].geoscore
         }));

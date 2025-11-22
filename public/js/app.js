@@ -17,8 +17,49 @@ const SAMPLE_RATE = 48000;
 const WINDOW_SECONDS = 3;
 const WINDOW_SAMPLES = SAMPLE_RATE * WINDOW_SECONDS;
 const INFERENCE_INTERVAL_MS = 500;
-const TEMPORAL_POOL_WINDOW = 5;      // number of recent inference result sets
-const USE_TEMPORAL_POOL = true;      // toggle pooling
+const TEMPORAL_POOL_WINDOW = 5;
+const USE_TEMPORAL_POOL = true;
+
+// Spectrogram frequency range + colormap
+const SPECTRO_MIN_FREQ_DEFAULT = 0;
+const SPECTRO_MAX_FREQ_DEFAULT = 12000;
+let spectroMinFreq = SPECTRO_MIN_FREQ_DEFAULT;
+let spectroMaxFreq = SPECTRO_MAX_FREQ_DEFAULT;
+let colormapName = "viridis";
+let colormapFn = d3.interpolateViridis;
+
+// Label language selection (must match worker supported list) - now with display names
+const LANG_LABELS = {
+  en_us: "English (US)",
+  en_uk: "English (UK)",
+  de: "Deutsch",
+  fr: "Français",
+  es: "Español",
+  it: "Italiano",
+  nl: "Nederlands",
+  pt: "Português",
+  fi: "Suomi",
+  sv: "Svenska",
+  no: "Norsk",
+  da: "Dansk",
+  pl: "Polski",
+  ru: "Русский",
+  uk: "Українська",
+  cs: "Čeština",
+  sk: "Slovenčina",
+  sl: "Slovenski",
+  hu: "Magyar",
+  ro: "Română",
+  tr: "Türkçe",
+  ar: "العربية",
+  ja: "日本語",
+  ko: "한국어",
+  th: "ไทย",
+  zh: "中文",
+  af: "Afrikaans"
+};
+const SUPPORTED_LABEL_LANGS = Object.keys(LANG_LABELS);
+let currentLabelLang = "en_us";
 
 let geolocation = null;
 let geoWatchId = null;
@@ -84,13 +125,18 @@ document.addEventListener("DOMContentLoaded", () => {
 /* -------------------------------------------------
  * Worker setup
  * ------------------------------------------------- */
-function initWorker() {
-  // Use injected path prefix
+function initWorker(langOverride) {
+  if (birdnetWorker) {
+    try { birdnetWorker.terminate(); } catch (_) {}
+    birdnetWorker = null;
+    workerReady = false;
+  }
   const prefix = (window.PATH_PREFIX || "/");
   const tfPath = prefix + "js/tfjs-4.14.0.min.js";
   const root   = prefix + "models";
-  const lang   = navigator.language || "en-US";
+  const lang   = langOverride || currentLabelLang || (navigator.language || "en-US");
   const params = new URLSearchParams({ tf: tfPath, root, lang });
+  statusEl().textContent = "Loading BirdNET… 0%";
   birdnetWorker = new Worker(prefix + "js/birdnet-worker.js?" + params.toString());
 
   birdnetWorker.onmessage = (event) => {
@@ -173,10 +219,6 @@ function initUIControls() {
     }
   }, (v) => `${v}s`);
 
-  bindRange("zoomRange", spectroZoom, (v) => {
-    spectroZoom = v;
-  }, (v) => `${Math.round(v * 100)}%`);
-
   bindRange("gainRange", spectroGain, (v) => {
     spectroGain = v;
   }, (v) => `${v.toFixed(1)}×`);
@@ -189,6 +231,44 @@ function initUIControls() {
   bindRange("inputGainRange", inputGain, (v) => {
     inputGain = v;
   }, (v) => `${v.toFixed(1)}×`);
+
+  bindRange("minFreqRange", spectroMinFreq, (v) => {
+    spectroMinFreq = Math.min(v, spectroMaxFreq - 100);
+  }, (v) => `${Math.round(v)} Hz`);
+
+  bindRange("maxFreqRange", spectroMaxFreq, (v) => {
+    spectroMaxFreq = Math.max(v, spectroMinFreq + 100);
+  }, (v) => `${Math.round(v)} Hz`);
+
+  const colormapSelect = document.getElementById("colormapSelect");
+  if (colormapSelect) {
+    colormapSelect.value = colormapName;
+    colormapSelect.addEventListener("change", () => {
+      colormapName = colormapSelect.value;
+      updateColormap(colormapName);
+    });
+  }
+
+  const langSelect = document.getElementById("labelLangSelect");
+  if (langSelect) {
+    // Populate with human-readable names
+    langSelect.innerHTML = SUPPORTED_LABEL_LANGS
+      .map(code => {
+        const label = LANG_LABELS[code] || code;
+        const sel = code === currentLabelLang ? " selected" : "";
+        return `<option value="${code}"${sel}>${label}</option>`;
+      })
+      .join("");
+    langSelect.addEventListener("change", () => {
+      currentLabelLang = langSelect.value;
+      latestDetections = [];
+      renderDetections([]);
+      statusEl().textContent = "Reloading model for language…";
+      const wasListening = isListening;
+      if (wasListening) stopListening();
+      initWorker(currentLabelLang);
+    });
+  }
 }
 
 function bindRange(id, initialValue, onChange, format) {
@@ -281,6 +361,17 @@ function stopSpectrogram() {
   }
 }
 
+function updateColormap(name) {
+  switch (name) {
+    case "inferno": colormapFn = d3.interpolateInferno; break;
+    case "plasma": colormapFn = d3.interpolatePlasma; break;
+    case "viridis": colormapFn = d3.interpolateViridis; break;
+    case "turbo": colormapFn = d3.interpolateTurbo; break;
+    case "cubehelix": colormapFn = d3.interpolateCubehelixDefault; break;
+    default: colormapFn = d3.interpolateMagma; break;
+  }
+}
+
 function drawSpectrogram() {
   spectroAnimationId = requestAnimationFrame(drawSpectrogram);
   if (!analyser || !audioContext) return;
@@ -300,17 +391,18 @@ function drawSpectrogram() {
   columnsNeeded = Math.min(columnsNeeded, w - 1);
   lastSpectroColumnTime += columnsNeeded * spectroColumnSeconds;
 
-  // Shift left
   spectroCtx.drawImage(
     spectroCanvas,
     columnsNeeded, 0, w - columnsNeeded, h,
     0, 0, w - columnsNeeded, h
   );
 
-  const displayLen = Math.floor(bufferLength * spectroZoom);
-  const startBin = 0;
-  const endBin = Math.max(startBin + 1, displayLen);
-  const barHeight = h / (endBin - startBin);
+  // Frequency bin mapping
+  const nyquist = SAMPLE_RATE / 2;
+  const startBin = Math.max(0, Math.floor((spectroMinFreq / nyquist) * bufferLength));
+  const endBin = Math.min(bufferLength, Math.floor((spectroMaxFreq / nyquist) * bufferLength));
+  const binSpan = Math.max(1, endBin - startBin);
+  const barHeight = h / binSpan;
 
   for (let c = 0; c < columnsNeeded; c++) {
     const x = w - columnsNeeded + c;
@@ -318,8 +410,8 @@ function drawSpectrogram() {
       const magnitude = Math.max(1e-6, dataArray[i] / 255);
       let norm = Math.log1p(magnitude * spectroGain) / Math.log1p(1 + spectroGain);
       norm = Math.pow(Math.min(1, Math.max(0, norm)), SPECTRO_OUTPUT_GAMMA);
-      const y = h - ((i - startBin) / (endBin - startBin)) * h;
-      spectroCtx.fillStyle = d3.interpolateMagma(norm);
+      const y = h - ((i - startBin) / binSpan) * h;
+      spectroCtx.fillStyle = colormapFn(norm);
       spectroCtx.fillRect(x, y - barHeight, 1, barHeight);
     }
   }
@@ -472,23 +564,17 @@ function getCurrentWindow() {
  * ------------------------------------------------- */
 function renderDetections(pooled) {
   if (Array.isArray(pooled)) latestDetections = pooled;
-
   const container = detectionsList();
   if (!container) return;
-
   const useGeoFilter = geoEnabled && !!geolocation;
   const all = latestDetections || [];
 
-  // Binary geo filter: if geo is active and we have a fix,
-  // drop any species with geoscore < 0.05 (5%) or missing.
   const afterGeo = useGeoFilter
     ? all.filter(p => typeof p.geoscore === "number" && p.geoscore >= 0.05)
     : all;
 
-  // Apply audio confidence threshold after geo filtering.
   const afterAudio = afterGeo.filter(p => p.confidence >= detectionThreshold);
 
-  // Sort and cap.
   const top = afterAudio
     .sort((a, b) => b.confidence - a.confidence)
     .slice(0, 20);
@@ -508,28 +594,19 @@ function renderDetections(pooled) {
   top.forEach(p => {
     const confPct = (p.confidence * 100).toFixed(1);
     const geoInfo = useGeoFilter && typeof p.geoscore === "number"
-      ? ` · Geo score: ${(p.geoscore * 100).toFixed(1)}%`
+      ? `Geo score: ${(p.geoscore * 100).toFixed(1)}%`
       : "";
-    const name = p.nameI18n || p.name || `Class ${p.index}`;
+    const commonName = p.commonNameI18n || p.commonName || `Class ${p.index}`;
+    const scientificName = p.scientificName || "";
 
     const card = document.createElement("div");
     card.className = "card";
     card.innerHTML = `
       <div class="card-body py-2 px-3">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <div class="fw-semibold small">${name}</div>
-            <div class="small text-muted">
-              Confidence: ${confPct}%${geoInfo}
-            </div>
-            ${
-              geolocation
-                ? `<div class="small text-muted">
-                     ${geolocation.lat.toFixed(3)}, ${geolocation.lon.toFixed(3)}
-                   </div>`
-                : ""
-            }
-          </div>
+        <div class="fw-semibold">${commonName}</div>
+        ${scientificName ? `<div class="fst-italic small mb-1">${scientificName}</div>` : ""}
+        <div class="small text-muted">
+          Confidence: ${confPct}%${geoInfo ? " · " + geoInfo : ""}
         </div>
       </div>
     `;
@@ -551,6 +628,7 @@ function setupSettingsToggle() {
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
     drawer.setAttribute("aria-hidden", open ? "false" : "true");
     drawer.classList.toggle("open", open);
+    document.body.classList.toggle("drawer-open", open); // add body flag
     if (overlay) {
       overlay.classList.toggle("active", open);
       overlay.setAttribute("aria-hidden", open ? "false" : "true");

@@ -66,25 +66,9 @@ permalink: "/"
 
       <div class="settings-grid">
         <div>
-          <label for="durationRange" class="form-label">Spectrogram duration</label>
-          <input type="range" class="form-range" id="durationRange" min="5" max="60" step="1">
-          <div class="form-text">
-            Showing <span class="form-range-value" id="durationValue">25&nbsp;s</span>
-          </div>
-        </div>
-        <div>
-          <label for="zoomRange" class="form-label">Spectrogram frequency zoom</label>
-          <input type="range" class="form-range" id="zoomRange" min="0.10" max="1.00" step="0.05">
-          <div class="form-text">
-            Zoom <span class="form-range-value" id="zoomValue">75%</span>
-          </div>
-        </div>
-        <div>
-          <label for="gainRange" class="form-label">Spectrogram gain</label>
-          <input type="range" class="form-range" id="gainRange" min="0.5" max="10.0" step="0.1">
-          <div class="form-text">
-            Gain <span class="form-range-value" id="gainValue">2.5×</span>
-          </div>
+          <label for="labelLangSelect" class="form-label">Label language</label>
+          <select id="labelLangSelect" class="form-select"></select>
+          <div class="form-text">Reloads model labels.</div>
         </div>
         <div>
           <label for="thresholdRange" class="form-label">Detection threshold</label>
@@ -93,6 +77,39 @@ permalink: "/"
             Showing confidence ≥ <span class="form-range-value" id="thresholdValue">25%</span>
           </div>
         </div>
+        <div>
+          <label for="durationRange" class="form-label">Spectrogram duration</label>
+          <input type="range" class="form-range" id="durationRange" min="5" max="60" step="1">
+          <div class="form-text">
+            Showing <span class="form-range-value" id="durationValue">20&nbsp;s</span>
+          </div>
+        </div>
+        <div>
+          <label for="minFreqRange" class="form-label">Min frequency (Hz)</label>
+          <input type="range" class="form-range" id="minFreqRange" min="0" max="12000" step="100">
+          <div class="form-text">
+            Min <span class="form-range-value" id="minFreqValue">0 Hz</span>
+          </div>
+        </div>
+        <div>
+          <label for="maxFreqRange" class="form-label">Max frequency (Hz)</label>
+          <input type="range" class="form-range" id="maxFreqRange" min="1000" max="15000" step="100">
+          <div class="form-text">
+            Max <span class="form-range-value" id="maxFreqValue">8000 Hz</span>
+          </div>
+        </div>
+        <div>
+          <label for="colormapSelect" class="form-label">Spectrogram colormap</label>
+          <select id="colormapSelect" class="form-select">
+            <option value="viridis">Viridis</option>
+            <option value="magma">Magma</option>
+            <option value="inferno">Inferno</option>
+            <option value="plasma">Plasma</option>
+            <option value="turbo">Turbo</option>
+            <option value="cubehelix">Cubehelix</option>
+          </select>
+          <div class="form-text">Color scale for intensity.</div>
+        </div>        
         <div>
           <label for="inputGainRange" class="form-label">Input gain (model)</label>
           <input type="range" class="form-range" id="inputGainRange" min="0.5" max="3.0" step="0.1">
