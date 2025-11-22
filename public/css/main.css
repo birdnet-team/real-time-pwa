@@ -16,8 +16,8 @@ body {
   border-bottom: 1px solid #1e2226;
 }
 .status-bar #statusText {
-  font-size: 0.75rem;
-  line-height: 1.0;
+  font-size: 0.85rem;
+  line-height: 1.2;
 }
 .status-bar .btn-link {
   color: #d6d9dd;

@@ -52,54 +52,57 @@ permalink: "/"
       </button>
     </div>
     <div class="settings-drawer-body">
-      <div class="mb-4">
+      
+      <!-- Section: Detection -->
+      <h6 class="text-uppercase text-muted fw-bold mb-3">Detection & Model</h6>
+      
+      <div class="mb-3 p-3 bg-light rounded-3">
         <div class="form-check form-switch">
           <input class="form-check-input" type="checkbox" id="geoToggle" checked>
           <label class="form-check-label fw-semibold" for="geoToggle">Use geolocation</label>
         </div>
-        <div class="geo-status" id="geoStatusText">Awaiting geolocation…</div>
+        <div class="geo-status mt-1" id="geoStatusText">Awaiting geolocation…</div>
         <div class="geo-status">
-          Coordinates:
-          <span class="fw-semibold" id="geoCoordsText">—</span>
+          Coordinates: <span class="fw-semibold" id="geoCoordsText">—</span>
         </div>
       </div>
 
-      <div class="settings-grid">
-        <div>
+      <div class="row g-3">
+        <div class="col-12">
           <label for="labelLangSelect" class="form-label">Label language</label>
           <select id="labelLangSelect" class="form-select"></select>
-          <div class="form-text">Reloads model labels.</div>
         </div>
-        <div>
-          <label for="thresholdRange" class="form-label">Detection threshold</label>
+        <div class="col-6">
+          <label for="thresholdRange" class="form-label">Threshold</label>
           <input type="range" class="form-range" id="thresholdRange" min="1" max="99" step="1">
-          <div class="form-text">
-            Showing confidence ≥ <span class="form-range-value" id="thresholdValue">25%</span>
+          <div class="form-text small">
+            ≥ <span class="form-range-value" id="thresholdValue">25%</span>
           </div>
         </div>
-        <div>
-          <label for="durationRange" class="form-label">Spectrogram duration</label>
+        <div class="col-6">
+          <label for="inputGainRange" class="form-label">Mic Gain</label>
+          <input type="range" class="form-range" id="inputGainRange" min="0.5" max="3.0" step="0.1">
+          <div class="form-text small">
+            <span class="form-range-value" id="inputGainValue">1.0×</span>
+          </div>
+        </div>
+      </div>
+
+      <hr class="my-4 opacity-25">
+
+      <!-- Section: Spectrogram -->
+      <h6 class="text-uppercase text-muted fw-bold mb-3">Spectrogram</h6>
+
+      <div class="row g-3">
+        <div class="col-6">
+          <label for="durationRange" class="form-label">Duration</label>
           <input type="range" class="form-range" id="durationRange" min="5" max="60" step="1">
-          <div class="form-text">
-            Showing <span class="form-range-value" id="durationValue">20&nbsp;s</span>
+          <div class="form-text small">
+            <span class="form-range-value" id="durationValue">20&nbsp;s</span>
           </div>
         </div>
-        <div>
-          <label for="minFreqRange" class="form-label">Min frequency (Hz)</label>
-          <input type="range" class="form-range" id="minFreqRange" min="0" max="12000" step="100">
-          <div class="form-text">
-            Min <span class="form-range-value" id="minFreqValue">0 Hz</span>
-          </div>
-        </div>
-        <div>
-          <label for="maxFreqRange" class="form-label">Max frequency (Hz)</label>
-          <input type="range" class="form-range" id="maxFreqRange" min="1000" max="15000" step="100">
-          <div class="form-text">
-            Max <span class="form-range-value" id="maxFreqValue">12000 Hz</span>
-          </div>
-        </div>
-        <div>
-          <label for="colormapSelect" class="form-label">Spectrogram colormap</label>
+        <div class="col-6">
+          <label for="colormapSelect" class="form-label">Colormap</label>
           <select id="colormapSelect" class="form-select">
             <option value="viridis">Viridis</option>
             <option value="magma">Magma</option>
@@ -108,16 +111,40 @@ permalink: "/"
             <option value="turbo">Turbo</option>
             <option value="cubehelix">Cubehelix</option>
           </select>
-          <div class="form-text">Color scale for intensity.</div>
-        </div>        
-        <div>
-          <label for="inputGainRange" class="form-label">Input gain (model)</label>
-          <input type="range" class="form-range" id="inputGainRange" min="0.5" max="3.0" step="0.1">
-          <div class="form-text">
-            Gain <span class="form-range-value" id="inputGainValue">1.0×</span>
-          </div>
+        </div>
+
+        <!-- Frequency Group -->
+        <div class="col-12 mt-4">
+          <label class="form-label fw-semibold mb-0">Frequency Range (Hz)</label>
+        </div>
+        <div class="col-6 mt-1">
+          <label for="minFreqRange" class="form-label small text-muted">Min</label>
+          <input type="range" class="form-range" id="minFreqRange" min="0" max="12000" step="100">
+          <div class="form-text small"><span class="form-range-value" id="minFreqValue">0 Hz</span></div>
+        </div>
+        <div class="col-6 mt-1">
+          <label for="maxFreqRange" class="form-label small text-muted">Max</label>
+          <input type="range" class="form-range" id="maxFreqRange" min="1000" max="15000" step="100">
+          <div class="form-text small"><span class="form-range-value" id="maxFreqValue">12000 Hz</span></div>
+        </div>
+
+        <!-- Amplitude Group -->
+        <div class="col-12 mt-3">
+          <label class="form-label fw-semibold mb-0">Amplitude Range (dB)</label>
+        </div>
+        <div class="col-6 mt-1">
+          <label for="minDbRange" class="form-label small text-muted">Min (Floor)</label>
+          <input type="range" class="form-range" id="minDbRange" min="-130" max="-50" step="5">
+          <div class="form-text small"><span class="form-range-value" id="minDbValue">-100 dB</span></div>
+        </div>
+        <div class="col-6 mt-1">
+          <label for="maxDbRange" class="form-label small text-muted">Max (Ceiling)</label>
+          <input type="range" class="form-range" id="maxDbRange" min="-60" max="0" step="5">
+          <div class="form-text small"><span class="form-range-value" id="maxDbValue">-30 dB</span></div>
         </div>
       </div>
+      
+      <div class="pb-5"></div> <!-- Spacer for bottom scroll -->
     </div>
   </aside>
 </section>

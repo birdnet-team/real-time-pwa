@@ -136,13 +136,14 @@ let analyser;
 let dataArray;
 let bufferLength;
 
-const SPECTRO_FFT_SIZE = 2048; // Higher resolution (was likely default 2048, but explicit is good)
+const SPECTRO_FFT_SIZE = 2048; // Higher resolution
 const SPECTRO_DEFAULT_DURATION_SEC = 20;
 const SPECTRO_DEFAULT_GAIN = 1.5;
 const SPECTRO_OUTPUT_GAMMA = 0.8;
 const SPECTRO_SMOOTHING = 0.0; // No smoothing for crisp details
-const MIN_DECIBELS = -120;     // Floor for silence
-const MAX_DECIBELS = -50;      // Ceiling for loud sounds (tweak for contrast)
+
+let spectroMinDb = -100;     // Floor for silence
+let spectroMaxDb = -30;      // Ceiling for loud sounds
 
 let spectroDurationSec = SPECTRO_DEFAULT_DURATION_SEC;
 let spectroGain = SPECTRO_DEFAULT_GAIN;
@@ -281,6 +282,14 @@ function initUIControls() {
   bindRange("maxFreqRange", spectroMaxFreq, (v) => {
     spectroMaxFreq = Math.max(v, spectroMinFreq + 100);
   }, (v) => `${Math.round(v)} Hz`);
+
+  bindRange("minDbRange", spectroMinDb, (v) => {
+    spectroMinDb = Math.min(v, spectroMaxDb - 10);
+  }, (v) => `${v} dB`);
+
+  bindRange("maxDbRange", spectroMaxDb, (v) => {
+    spectroMaxDb = Math.max(v, spectroMinDb + 10);
+  }, (v) => `${v} dB`);
 
   const colormapSelect = document.getElementById("colormapSelect");
   if (colormapSelect) {
@@ -460,8 +469,7 @@ function drawSpectrogram() {
       const db = dataArray[i];
       
       // Normalize dB to 0..1 range
-      // db is usually -140 to -30
-      let norm = (db - MIN_DECIBELS) / (MAX_DECIBELS - MIN_DECIBELS);
+      let norm = (db - spectroMinDb) / (spectroMaxDb - spectroMinDb);
       norm = Math.max(0, Math.min(1, norm));
       
       // Optional: slight gamma for contrast
