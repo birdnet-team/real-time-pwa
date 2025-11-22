@@ -136,10 +136,13 @@ let analyser;
 let dataArray;
 let bufferLength;
 
-const SPECTRO_FFT_SIZE = 1024;
+const SPECTRO_FFT_SIZE = 2048; // Higher resolution (was likely default 2048, but explicit is good)
 const SPECTRO_DEFAULT_DURATION_SEC = 20;
 const SPECTRO_DEFAULT_GAIN = 1.5;
 const SPECTRO_OUTPUT_GAMMA = 0.8;
+const SPECTRO_SMOOTHING = 0.0; // No smoothing for crisp details
+const MIN_DECIBELS = -120;     // Floor for silence
+const MAX_DECIBELS = -50;      // Ceiling for loud sounds (tweak for contrast)
 
 let spectroDurationSec = SPECTRO_DEFAULT_DURATION_SEC;
 let spectroGain = SPECTRO_DEFAULT_GAIN;
@@ -372,7 +375,7 @@ function startSpectrogram(source) {
 
   analyser = audioContext.createAnalyser();
   analyser.fftSize = SPECTRO_FFT_SIZE;
-  analyser.smoothingTimeConstant = 0.6;
+  analyser.smoothingTimeConstant = SPECTRO_SMOOTHING;
   source.connect(analyser);
 
   bufferLength = analyser.frequencyBinCount;
@@ -414,7 +417,11 @@ function drawSpectrogram() {
   spectroAnimationId = requestAnimationFrame(drawSpectrogram);
   if (!analyser || !audioContext) return;
 
-  analyser.getByteFrequencyData(dataArray);
+  // Use Float32Array for full precision dB data
+  const bufferLength = analyser.frequencyBinCount;
+  const dataArray = new Float32Array(bufferLength);
+  analyser.getFloatFrequencyData(dataArray);
+
   const w = spectroCanvas.width;
   const h = spectroCanvas.height;
   if (!w || !h) return;
@@ -438,17 +445,35 @@ function drawSpectrogram() {
   // Frequency bin mapping
   const nyquist = SAMPLE_RATE / 2;
   const startBin = Math.max(0, Math.floor((spectroMinFreq / nyquist) * bufferLength));
-  const endBin = Math.min(bufferLength, Math.floor((spectroMaxFreq / nyquist) * bufferLength));
-  const binSpan = Math.max(1, endBin - startBin);
-  const barHeight = h / binSpan;
+  const endBin = Math.min(bufferLength - 1, Math.floor((spectroMaxFreq / nyquist) * bufferLength));
+  const binRange = endBin - startBin;
 
   for (let c = 0; c < columnsNeeded; c++) {
     const x = w - columnsNeeded + c;
-    for (let i = startBin; i < endBin; i++) {
-      const magnitude = Math.max(1e-6, dataArray[i] / 255);
-      let norm = Math.log1p(magnitude * spectroGain) / Math.log1p(1 + spectroGain);
-      norm = Math.pow(Math.min(1, Math.max(0, norm)), SPECTRO_OUTPUT_GAMMA);
-      const y = h - ((i - startBin) / binSpan) * h;
+    
+    // Clear column
+    spectroCtx.fillStyle = "#000";
+    spectroCtx.fillRect(x, 0, 1, h);
+
+    // Draw frequency bins
+    for (let i = startBin; i <= endBin; i++) {
+      const db = dataArray[i];
+      
+      // Normalize dB to 0..1 range
+      // db is usually -140 to -30
+      let norm = (db - MIN_DECIBELS) / (MAX_DECIBELS - MIN_DECIBELS);
+      norm = Math.max(0, Math.min(1, norm));
+      
+      // Optional: slight gamma for contrast
+      norm = Math.pow(norm, 0.8);
+
+      // Map to Y pixels (flip Y so low freq is at bottom)
+      // We map the *selected frequency range* to the full canvas height
+      const relIndex = i - startBin;
+      const yPct = relIndex / binRange;
+      const y = h - (yPct * h);
+      const barHeight = Math.max(1, h / binRange);
+
       spectroCtx.fillStyle = colormapFn(norm);
       spectroCtx.fillRect(x, y - barHeight, 1, barHeight);
     }
@@ -559,6 +584,11 @@ function setupAudioGraphFromStream(stream) {
       circularWriteIndex = (circularWriteIndex + 1) % circularBuffer.length;
     }
   };
+
+  analyser = audioContext.createAnalyser();
+  analyser.fftSize = SPECTRO_FFT_SIZE;
+  analyser.smoothingTimeConstant = SPECTRO_SMOOTHING;
+  source.connect(analyser);
 
   startInferenceLoop();
 }
