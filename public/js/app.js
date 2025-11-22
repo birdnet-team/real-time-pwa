@@ -154,17 +154,26 @@ let lastSpectroColumnTime = 0;
  * Boot
  * ------------------------------------------------- */
 document.addEventListener("DOMContentLoaded", () => {
-  // Guard: Only initialize app logic if the main interface is present
-  if (!document.getElementById("recordButton")) return;
+  const isLive = !!document.getElementById("recordButton");
+  const isExplore = !!document.getElementById("exploreList");
 
-  initWorker(); // uses currentLabelLang defaulted from browser
-  setupRecordButton();
-  initUIControls();
+  // Guard: Only run if we are on Live or Explore pages
+  if (!isLive && !isExplore) return;
+
+  initWorker(); 
   setupSettingsToggle();
+  initUIControls();
+
+  if (isLive) {
+    setupRecordButton();
+  }
+
   if (geoEnabled) {
     getGeolocation();
   } else {
     updateGeoDisplay("Geolocation disabled.", null);
+    // If on explore page and geo disabled, request list (will show all/default)
+    if (isExplore) requestSpeciesList();
   }
 });
 
@@ -182,7 +191,11 @@ function initWorker(langOverride) {
   const root   = prefix + "models";
   const lang   = langOverride || currentLabelLang || (navigator.language || "en-US");
   const params = new URLSearchParams({ tf: tfPath, root, lang });
-  statusEl().textContent = "Loading BirdNET… 0%";
+  
+  // Safe status update
+  const status = statusEl();
+  if (status) status.textContent = "Loading BirdNET… 0%";
+  
   birdnetWorker = new Worker(prefix + "js/birdnet-worker.js?" + params.toString());
 
   birdnetWorker.onmessage = (event) => {
@@ -193,13 +206,17 @@ function initWorker(langOverride) {
       case "load_geomodel":
       case "load_labels":
         if (typeof data.progress === "number") {
-          statusEl().textContent = `Loading BirdNET… ${data.progress}%`;
+          const s = statusEl();
+          if (s) s.textContent = `Loading BirdNET… ${data.progress}%`;
         }
         break;
       case "loaded":
         workerReady = true;
-        statusEl().textContent = "Model ready. Tap 'Start' to record.";
+        const s = statusEl();
+        if (s) s.textContent = "Model ready. Tap 'Start' to record.";
         if (geolocation) sendAreaScores();
+        // If on explore page, request list immediately after load
+        if (document.getElementById("exploreList")) requestSpeciesList();
         break;
       case "predict_debug":
         // Debug info optional
@@ -225,7 +242,11 @@ function initWorker(langOverride) {
         }
         break;
       case "area-scores":
-        // Geo priors updated; worker handles refresh
+        // Geo priors updated
+        if (document.getElementById("exploreList")) requestSpeciesList();
+        break;
+      case "species_list":
+        renderExploreList(data.list);
         break;
       default:
         break;
@@ -234,8 +255,64 @@ function initWorker(langOverride) {
 
   birdnetWorker.onerror = (err) => {
     console.error("Worker error", err);
-    statusEl().textContent = "BirdNET worker error.";
+    const s = statusEl();
+    if (s) s.textContent = "BirdNET worker error.";
   };
+}
+
+function requestSpeciesList() {
+  if (birdnetWorker) {
+    birdnetWorker.postMessage({ message: "get_species_list" });
+  }
+}
+
+function renderExploreList(list) {
+  const container = document.getElementById("exploreList");
+  if (!container || !list) return;
+
+  // Filter and sort
+  // If geo is enabled, sort by geoscore. If disabled, maybe alphabetical?
+  // Default to geoscore desc
+  const sorted = list
+    .filter(item => item.geoscore > 0.01) // Hide extremely unlikely
+    .sort((a, b) => b.geoscore - a.geoscore)
+    .slice(0, 100); // Limit to top 100
+
+  container.innerHTML = "";
+  
+  if (sorted.length === 0) {
+    container.innerHTML = `<div class="col-12 text-center text-muted">No species found for this location/threshold.</div>`;
+    return;
+  }
+
+  sorted.forEach(bird => {
+    const scorePct = (bird.geoscore * 100).toFixed(1);
+    const common = bird.commonNameI18n || bird.commonName;
+    
+    const col = document.createElement("div");
+    col.className = "col-md-6 col-lg-4";
+    col.innerHTML = `
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h5 class="card-title mb-1">${common}</h5>
+              <h6 class="card-subtitle text-muted fst-italic small">${bird.scientificName}</h6>
+            </div>
+            <span class="badge bg-light text-dark border">
+              ${scorePct}%
+            </span>
+          </div>
+          <div class="mt-2">
+            <div class="progress" style="height: 4px;">
+              <div class="progress-bar bg-success" role="progressbar" style="width: ${scorePct}%" aria-valuenow="${scorePct}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    container.appendChild(col);
+  });
 }
 
 /* -------------------------------------------------

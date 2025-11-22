@@ -250,6 +250,18 @@ async function main() {
         postMessage({ message:'pooled', pooled });
       }
     }
+
+    // Return full species list with current scores
+    if (data.message === 'get_species_list') {
+      const list = birds.map((b, i) => ({
+        index: i,
+        scientificName: b.scientificName,
+        commonName: b.commonName,
+        commonNameI18n: b.commonNameI18n,
+        geoscore: b.geoscore
+      }));
+      postMessage({ message: 'species_list', list });
+    }
   };
 }
 
