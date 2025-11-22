@@ -22,7 +22,7 @@ const USE_TEMPORAL_POOL = true;
 
 // Spectrogram frequency range + colormap
 const SPECTRO_MIN_FREQ_DEFAULT = 0;
-const SPECTRO_MAX_FREQ_DEFAULT = 10000;
+const SPECTRO_MAX_FREQ_DEFAULT = 12000;
 let spectroMinFreq = SPECTRO_MIN_FREQ_DEFAULT;
 let spectroMaxFreq = SPECTRO_MAX_FREQ_DEFAULT;
 let colormapName = "viridis";
@@ -59,7 +59,48 @@ const LANG_LABELS = {
   af: "Afrikaans"
 };
 const SUPPORTED_LABEL_LANGS = Object.keys(LANG_LABELS);
-let currentLabelLang = "en_us";
+
+// Map browser locale to available label language
+function mapBrowserLangToLabelLang(locale) {
+  if (!locale) return "en_us";
+  const l = locale.toLowerCase();
+  // Direct matches
+  if (SUPPORTED_LABEL_LANGS.includes(l)) return l;
+  // Collapse region (e.g. en-us -> en_us, de-de -> de)
+  const base = l.split(/[-_]/)[0];
+  switch (base) {
+    case "en": return l.includes("gb") || l.includes("uk") ? "en_uk" : "en_us";
+    case "de": return "de";
+    case "fr": return "fr";
+    case "es": return "es";
+    case "it": return "it";
+    case "nl": return "nl";
+    case "pt": return "pt";
+    case "fi": return "fi";
+    case "sv": return "sv";
+    case "no": return "no";
+    case "da": return "da";
+    case "pl": return "pl";
+    case "ru": return "ru";
+    case "uk": return "uk";
+    case "cs": return "cs";
+    case "sk": return "sk";
+    case "sl": return "sl";
+    case "hu": return "hu";
+    case "ro": return "ro";
+    case "tr": return "tr";
+    case "ar": return "ar";
+    case "ja": return "ja";
+    case "ko": return "ko";
+    case "th": return "th";
+    case "zh": return "zh";
+    case "af": return "af";
+    default: return "en_us";
+  }
+}
+
+const browserLangCode = mapBrowserLangToLabelLang(navigator.language);
+let currentLabelLang = browserLangCode;
 
 let geolocation = null;
 let geoWatchId = null;
@@ -95,14 +136,12 @@ let analyser;
 let dataArray;
 let bufferLength;
 
-const SPECTRO_FFT_SIZE = 512;
+const SPECTRO_FFT_SIZE = 1024;
 const SPECTRO_DEFAULT_DURATION_SEC = 20;
-const SPECTRO_DEFAULT_ZOOM = 0.75;
-const SPECTRO_DEFAULT_GAIN = 1.0;
+const SPECTRO_DEFAULT_GAIN = 1.5;
 const SPECTRO_OUTPUT_GAMMA = 0.8;
 
 let spectroDurationSec = SPECTRO_DEFAULT_DURATION_SEC;
-let spectroZoom = SPECTRO_DEFAULT_ZOOM;
 let spectroGain = SPECTRO_DEFAULT_GAIN;
 let spectroColumnSeconds = 0;
 let lastSpectroColumnTime = 0;
@@ -111,7 +150,7 @@ let lastSpectroColumnTime = 0;
  * Boot
  * ------------------------------------------------- */
 document.addEventListener("DOMContentLoaded", () => {
-  initWorker();
+  initWorker(); // uses currentLabelLang defaulted from browser
   setupRecordButton();
   initUIControls();
   setupSettingsToggle();
@@ -251,7 +290,6 @@ function initUIControls() {
 
   const langSelect = document.getElementById("labelLangSelect");
   if (langSelect) {
-    // Populate with human-readable names
     langSelect.innerHTML = SUPPORTED_LABEL_LANGS
       .map(code => {
         const label = LANG_LABELS[code] || code;
