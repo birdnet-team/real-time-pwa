@@ -1,4 +1,4 @@
-const CACHE_NAME = "birdnet-rt-v0.1.0";
+const CACHE_NAME = "birdnet-rt-v0.1.1";
 const MODEL_CACHE = CACHE_NAME + "-model";
 
 // Dev flags
