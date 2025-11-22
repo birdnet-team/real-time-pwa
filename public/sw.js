@@ -1,4 +1,6 @@
 const CACHE_NAME = "birdnet-rt-v2";
+const MODEL_CACHE_NAME = CACHE_NAME + "-model";
+
 const CORE_URLS = [
   "/",
   "/css/main.css",
@@ -6,31 +8,31 @@ const CORE_URLS = [
   "/manifest.webmanifest"
 ];
 
-// Model files to cache
+// If public/ is the document root, drop "public" from URLs.
 const MODEL_URLS = [
-  "/public/models/birdnet/group1-shard1of13.bin",
-  "/public/models/birdnet/group1-shard2of13.bin",
-  "/public/models/birdnet/group1-shard3of13.bin",
-  "/public/models/birdnet/group1-shard4of13.bin",
-  "/public/models/birdnet/group1-shard5of13.bin",
-  "/public/models/birdnet/group1-shard6of13.bin",
-  "/public/models/birdnet/group1-shard7of13.bin",
-  "/public/models/birdnet/group1-shard8of13.bin",
-  "/public/models/birdnet/group1-shard9of13.bin",
-  "/public/models/birdnet/group1-shard10of13.bin",
-  "/public/models/birdnet/group1-shard11of13.bin",
-  "/public/models/birdnet/group1-shard12of13.bin",
-  "/public/models/birdnet/group1-shard13of13.bin",
-  "/public/models/birdnet/model.json",
-  "/public/models/birdnet/area-model/group1-shard1of2.bin",
-  "/public/models/birdnet/area-model/group1-shard2of2.bin",
-  "/public/models/birdnet/area-model/model.json",
-  "/public/models/birdnet/labels/en_us.txt",
-  "/public/models/birdnet/labels/en_uk.txt",
-  "/public/models/birdnet/labels/de.txt",
-  "/public/models/birdnet/labels/fr.txt",
-  "/public/models/birdnet/labels/es.txt",
-  "/public/models/birdnet/labels/it.txt"
+  "/models/birdnet/group1-shard1of13.bin",
+  "/models/birdnet/group1-shard2of13.bin",
+  "/models/birdnet/group1-shard3of13.bin",
+  "/models/birdnet/group1-shard4of13.bin",
+  "/models/birdnet/group1-shard5of13.bin",
+  "/models/birdnet/group1-shard6of13.bin",
+  "/models/birdnet/group1-shard7of13.bin",
+  "/models/birdnet/group1-shard8of13.bin",
+  "/models/birdnet/group1-shard9of13.bin",
+  "/models/birdnet/group1-shard10of13.bin",
+  "/models/birdnet/group1-shard11of13.bin",
+  "/models/birdnet/group1-shard12of13.bin",
+  "/models/birdnet/group1-shard13of13.bin",
+  "/models/birdnet/model.json",
+  "/models/birdnet/area-model/group1-shard1of2.bin",
+  "/models/birdnet/area-model/group1-shard2of2.bin",
+  "/models/birdnet/area-model/model.json",
+  "/models/birdnet/labels/en_us.txt",
+  "/models/birdnet/labels/en_uk.txt",
+  "/models/birdnet/labels/de.txt",
+  "/models/birdnet/labels/fr.txt",
+  "/models/birdnet/labels/es.txt",
+  "/models/birdnet/labels/it.txt"
 ];
 
 const DISABLE_CACHE = false;
