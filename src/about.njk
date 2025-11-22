@@ -4,15 +4,84 @@ layout: layouts/base.njk
 permalink: "/about/"
 ---
 
-<section class="page-header py-4">
+<section class="page-header py-5 bg-light border-bottom">
   <div class="container">
-    <h1 class="page-title mb-3">About</h1>
-    <p class="lead text-muted">
-      BirdNET Live is an experimental progressive web app that brings BirdNET’s bird sound identification models
-      directly into the browser using TensorFlow.js.
+    <h1 class="display-5 fw-bold mb-3">About BirdNET Live</h1>
+    <p class="lead text-muted mb-0">
+      Real-time bird sound identification running entirely in your web browser.
     </p>
-    <p class="text-muted mb-0">
-      Return to <a href="{{ '/' | url }}">Live</a> • Read <a href="{{ '/privacy/' | url }}">Privacy & Permissions</a>
-    </p>
+  </div>
+</section>
+
+<section class="py-5">
+  <div class="container">
+    <div class="row g-5">
+      <div class="col-lg-8">
+        
+        <h2 class="h3 fw-bold mb-3">What is this demo?</h2>
+        <p>
+          <strong>BirdNET Live</strong> is an experimental Progressive Web App (PWA) that demonstrates the capabilities of modern web browsers to run sophisticated machine learning models. Unlike the official BirdNET app which runs natively on Android/iOS, this version runs inside Chrome, Safari, or Firefox using <strong>TensorFlow.js</strong>.
+        </p>
+        <p>
+          This means you can identify birds on your laptop, tablet, or phone without installing an app store application, and—crucially—<strong>without sending any audio data to a server</strong>.
+        </p>
+
+        <hr class="my-5">
+
+        <h2 class="h3 fw-bold mb-3">What is BirdNET?</h2>
+        <p>
+          BirdNET is a research platform developed jointly by the <strong>K. Lisa Yang Center for Conservation Bioacoustics</strong> at the Cornell Lab of Ornithology and the <strong>Chemnitz University of Technology</strong>.
+        </p>
+        <p>
+          The project uses artificial neural networks to train computers to identify more than 6,000 of the most common bird species worldwide. It is one of the most advanced tools for acoustic monitoring of birds.
+        </p>
+        <a href="https://birdnet.cornell.edu/" target="_blank" class="btn btn-outline-primary mt-2">
+          Visit Official BirdNET Website <i class="bi bi-box-arrow-up-right ms-1"></i>
+        </a>
+
+        <hr class="my-5">
+
+        <h2 class="h3 fw-bold mb-3">How the Detection Works</h2>
+        <div class="d-flex flex-column gap-4">
+          <div class="d-flex gap-3">
+            <div class="flex-shrink-0">
+              <span class="badge bg-primary rounded-pill fs-5" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">1</span>
+            </div>
+            <div>
+              <h5 class="fw-semibold">Audio Capture</h5>
+              <p class="text-muted mb-0">Your browser's Web Audio API captures sound from your microphone and resamples it to 48,000 Hz.</p>
+            </div>
+          </div>
+          <div class="d-flex gap-3">
+            <div class="flex-shrink-0">
+              <span class="badge bg-primary rounded-pill fs-5" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">2</span>
+            </div>
+            <div>
+              <h5 class="fw-semibold">Spectrogram Generation</h5>
+              <p class="text-muted mb-0">The audio is sliced into 3-second chunks. These chunks are converted into <strong>Mel Spectrograms</strong>—visual representations of sound that show frequency intensity over time.</p>
+            </div>
+          </div>
+          <div class="d-flex gap-3">
+            <div class="flex-shrink-0">
+              <span class="badge bg-primary rounded-pill fs-5" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">3</span>
+            </div>
+            <div>
+              <h5 class="fw-semibold">Neural Network Inference</h5>
+              <p class="text-muted mb-0">The spectrogram image is fed into a Convolutional Neural Network (CNN). This model has learned to "see" bird calls in these images, distinguishing them from noise and other animals.</p>
+            </div>
+          </div>
+          <div class="d-flex gap-3">
+            <div class="flex-shrink-0">
+              <span class="badge bg-primary rounded-pill fs-5" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">4</span>
+            </div>
+            <div>
+              <h5 class="fw-semibold">Post-Processing</h5>
+              <p class="text-muted mb-0">The model outputs probability scores for thousands of species. We apply a <strong>confidence threshold</strong> (e.g., 25%) and optionally a <strong>location filter</strong> to hide birds that are unlikely to be found in your area.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>    
+    </div>
   </div>
 </section>

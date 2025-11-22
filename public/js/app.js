@@ -154,6 +154,9 @@ let lastSpectroColumnTime = 0;
  * Boot
  * ------------------------------------------------- */
 document.addEventListener("DOMContentLoaded", () => {
+  // Guard: Only initialize app logic if the main interface is present
+  if (!document.getElementById("recordButton")) return;
+
   initWorker(); // uses currentLabelLang defaulted from browser
   setupRecordButton();
   initUIControls();
