@@ -1,8 +1,8 @@
 const params = new URL(self.location.href).searchParams;
-const TF_PATH = params.get('tf') || '/js/tfjs-4.14.0.min.js';
+const TF_PATH = params.get('tf') || 'js/tfjs-4.14.0.min.js';
 importScripts(TF_PATH);
 
-const ROOT = params.get('root') || '/models';
+const ROOT = params.get('root') || 'models';
 const REQ_LANG = params.get('lang');
 
 const BIRD_BASE = ROOT + '/birdnet';

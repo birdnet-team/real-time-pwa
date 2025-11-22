@@ -81,12 +81,13 @@ document.addEventListener("DOMContentLoaded", () => {
  * Worker setup
  * ------------------------------------------------- */
 function initWorker() {
-  const tfPath = "/js/tfjs-4.14.0.min.js";
-  const root   = "/models";
+  // Use injected path prefix
+  const prefix = (window.PATH_PREFIX || "/");
+  const tfPath = prefix + "js/tfjs-4.14.0.min.js";
+  const root   = prefix + "models";
   const lang   = navigator.language || "en-US";
-
   const params = new URLSearchParams({ tf: tfPath, root, lang });
-  birdnetWorker = new Worker(`/js/birdnet-worker.js?${params.toString()}`);
+  birdnetWorker = new Worker(prefix + "js/birdnet-worker.js?" + params.toString());
 
   birdnetWorker.onmessage = (event) => {
     const data = event.data || {};

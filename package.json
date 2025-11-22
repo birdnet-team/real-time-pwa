@@ -9,5 +9,11 @@
   },
   "devDependencies": {
     "@11ty/eleventy": "^3.1.0"
+  },
+  "dependencies": {
+    "@tensorflow/tfjs": "^4.22.0",
+    "bootstrap": "^5.3.8",
+    "bootstrap-icons": "^1.13.1",
+    "d3": "^7.9.0"
   }
 }
