@@ -1,11 +1,11 @@
-const CACHE_NAME = "birdnet-rt-v3";
+const CACHE_NAME = "birdnet-rt-v0.1.0";
 const MODEL_CACHE = CACHE_NAME + "-model";
 
 // Dev flags
-const ENABLE_CACHING = false;        // set false to disable all caching
-const FORCE_CLEAR_ON_ACTIVATE = true; // set true to nuke old caches every reload
+const ENABLE_CACHING = true;        // set false to disable all caching
+const FORCE_CLEAR_ON_ACTIVATE = false; // set true to nuke old caches every reload
 
-// All core local assets (prefix not hardcoded; relative to scope)
+// All core local assets
 const CORE_URLS = [
   "./",
   "favicon.png",
@@ -22,7 +22,7 @@ const CORE_URLS = [
   "js/tfjs-4.14.0.min.js"
 ];
 
-// Model + label assets (relative)
+// Model + label assets
 const MODEL_URLS = [
   "models/birdnet/group1-shard1of13.bin",
   "models/birdnet/group1-shard2of13.bin",
