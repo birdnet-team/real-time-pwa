@@ -597,6 +597,11 @@ async function startListening() {
     if (button) button.classList.add("recording");
     const label = recordLabelTextEl();
     if (label) label.textContent = "Stop";
+    
+    // Show spinner
+    const spinner = document.getElementById("listeningIndicator");
+    if (spinner) spinner.classList.remove("d-none");
+    
     statusEl().textContent = "Requesting microphone access…";
 
     await requestWakeLock();
@@ -631,6 +636,11 @@ function stopListening() {
   if (button) button.classList.remove("recording");
   const label = recordLabelTextEl();
   if (label) label.textContent = "Start";
+  
+  // Hide spinner
+  const spinner = document.getElementById("listeningIndicator");
+  if (spinner) spinner.classList.add("d-none");
+
   statusEl().textContent = "Stopped. Tap 'Start' to resume.";
 
   lastInferenceStart = 0;
@@ -739,9 +749,10 @@ function renderDetections(pooled) {
 
   if (!top.length) {
     container.innerHTML = `
-      <div class="text-muted small">
-        No detections above ${Math.round(detectionThreshold * 100)}% confidence yet.
-        ${useGeoFilter ? "Geo filter may be hiding low geo-score species." : "Keep listening or lower the threshold."}
+      <div class="col-12 text-center text-muted py-5">
+        <i class="bi bi-soundwave fs-1 d-block mb-3 opacity-25"></i>
+        <p>No detections above ${Math.round(detectionThreshold * 100)}% confidence.</p>
+        ${useGeoFilter ? "<small>Geo filter active.</small>" : ""}
       </div>
     `;
     return;
@@ -755,18 +766,24 @@ function renderDetections(pooled) {
     const commonName = p.commonNameI18n || p.commonName || `Class ${p.index}`;
     const scientificName = p.scientificName || "";
 
-    const card = document.createElement("div");
-    card.className = "card";
-    card.innerHTML = `
-      <div class="card-body py-2 px-3">
-        <div class="fw-semibold">${commonName}</div>
-        ${scientificName ? `<div class="fst-italic small mb-1">${scientificName}</div>` : ""}
-        <div class="small text-muted">
-          Confidence: ${confPct}%${geoInfo ? " · " + geoInfo : ""}
+    const col = document.createElement("div");
+    col.className = "col-md-6 col-lg-4";
+    col.innerHTML = `
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <h5 class="card-title mb-0 fw-bold text-primary">${commonName}</h5>
+            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10">
+              ${confPct}%
+            </span>
+          </div>
+          ${scientificName ? `<h6 class="card-subtitle text-muted fst-italic small mb-3">${scientificName}</h6>` : ""}
+          
+          ${geoInfo ? `<div class="small text-muted border-top pt-2 mt-2"><i class="bi bi-geo-alt me-1"></i>${geoInfo}</div>` : ""}
         </div>
       </div>
     `;
-    container.appendChild(card);
+    container.appendChild(col);
   });
 }
 
