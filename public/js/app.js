@@ -280,7 +280,7 @@ function initWorker(langOverride) {
   birdnetWorker.onerror = (err) => {
     console.error("Worker error", err);
     const s = statusEl();
-    if (s) s.textContent = "BirdNET worker error.";
+    if (s) s.textContent = "BirdNET worker error. Refresh page.";
   };
 }
 
