@@ -326,24 +326,34 @@ function renderExploreList(list) {
   sorted.forEach(bird => {
     const scorePct = (bird.geoscore * 100).toFixed(1);
     const common = bird.commonNameI18n || bird.commonName;
+    const imgUrl = `https://birdnet.cornell.edu/api2/bird/${encodeURIComponent(bird.scientificName)}.webp`;
     
     const col = document.createElement("div");
     col.className = "col-md-6 col-lg-4";
     col.innerHTML = `
-      <div class="card h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <h5 class="card-title mb-1">${common}</h5>
-              <h6 class="card-subtitle text-muted fst-italic small">${bird.scientificName}</h6>
-            </div>
-            <span class="badge bg-light text-dark border">
-              ${scorePct}%
-            </span>
+      <div class="card h-100 border-0 shadow-sm overflow-hidden">
+        <div class="d-flex h-100">
+          <div class="flex-shrink-0 position-relative" style="width: 90px; background-color: #f8f9fa;">
+            <img src="${imgUrl}" 
+                 alt="${common}"
+                 loading="lazy"
+                 style="width: 100%; height: 100%; object-fit: cover;"
+                 onerror="this.style.display='none'">
           </div>
-          <div class="mt-2">
-            <div class="progress" style="height: 4px;">
-              <div class="progress-bar bg-success" role="progressbar" style="width: ${scorePct}%" aria-valuenow="${scorePct}" aria-valuemin="0" aria-valuemax="100"></div>
+          <div class="card-body py-2 px-3 flex-grow-1">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+              <div>
+                <h5 class="card-title mb-0 fw-bold text-dark text-truncate" style="max-width: 140px;" title="${common}">${common}</h5>
+                <h6 class="card-subtitle text-muted fst-italic small mt-1 text-truncate">${bird.scientificName}</h6>
+              </div>
+              <span class="badge bg-light text-dark border">
+                ${scorePct}%
+              </span>
+            </div>
+            <div class="mt-3">
+              <div class="progress" style="height: 4px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: ${scorePct}%" aria-valuenow="${scorePct}" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -806,8 +816,7 @@ function renderDetections(pooled) {
     .sort((a, b) => b.confidence - a.confidence)
     .slice(0, 20);
 
-  container.innerHTML = "";
-
+  // Handle empty state
   if (!top.length) {
     container.innerHTML = `
       <div class="col-12 text-center text-muted py-5">
@@ -819,32 +828,89 @@ function renderDetections(pooled) {
     return;
   }
 
-  top.forEach(p => {
+  // If the container has the empty state message, clear it first
+  if (container.querySelector(".text-center.text-muted")) {
+    container.innerHTML = "";
+  }
+
+  // Map current DOM elements by species code (scientific name as key)
+  const existingCards = new Map();
+  Array.from(container.children).forEach(child => {
+    const key = child.dataset.species;
+    if (key) existingCards.set(key, child);
+  });
+
+  // Set of keys in the new list
+  const newKeys = new Set();
+
+  top.forEach((p, index) => {
     const confPct = (p.confidence * 100).toFixed(1);
     const geoInfo = useGeoFilter && typeof p.geoscore === "number"
       ? `Geo score: ${(p.geoscore * 100).toFixed(1)}%`
       : "";
     const commonName = p.commonNameI18n || p.commonName || `Class ${p.index}`;
     const scientificName = p.scientificName || "";
+    const key = scientificName || `idx-${p.index}`;
+    const imgUrl = `https://birdnet.cornell.edu/api2/bird/${encodeURIComponent(scientificName)}.webp`;
 
-    const col = document.createElement("div");
-    col.className = "col-md-6 col-lg-4";
-    col.innerHTML = `
-      <div class="card h-100 border-0 shadow-sm">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <h5 class="card-title mb-0 fw-bold text-primary">${commonName}</h5>
-            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10">
-              ${confPct}%
-            </span>
+    newKeys.add(key);
+
+    let cardCol = existingCards.get(key);
+
+    if (cardCol) {
+      // UPDATE existing card
+      // Only update text/values to avoid image reload
+      const badge = cardCol.querySelector(".badge");
+      if (badge) badge.textContent = `${confPct}%`;
+      
+      const geoDiv = cardCol.querySelector(".geo-info");
+      if (geoDiv) {
+        if (geoInfo) geoDiv.innerHTML = `<i class="bi bi-geo-alt me-1"></i>${geoInfo}`;
+        else geoDiv.innerHTML = "";
+      }
+      
+      // Re-order: append to end (since we iterate in sort order, this sorts the DOM)
+      container.appendChild(cardCol);
+    } else {
+      // CREATE new card
+      cardCol = document.createElement("div");
+      cardCol.className = "col-md-6 col-lg-4 fade-in"; // Add animation class if desired
+      cardCol.dataset.species = key;
+      cardCol.innerHTML = `
+        <div class="card h-100 border-0 shadow-sm overflow-hidden">
+          <div class="d-flex h-100">
+            <div class="flex-shrink-0 position-relative" style="width: 90px; background-color: #f8f9fa;">
+              <img src="${imgUrl}" 
+                   alt="${commonName}"
+                   loading="lazy"
+                   style="width: 100%; height: 100%; object-fit: cover;"
+                   onerror="this.style.display='none'">
+            </div>
+            <div class="card-body py-2 px-3 flex-grow-1">
+              <div class="d-flex justify-content-between align-items-start mb-1">
+                <h5 class="card-title mb-0 fw-bold text-primary text-truncate" style="max-width: 140px;" title="${commonName}">${commonName}</h5>
+                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10">
+                  ${confPct}%
+                </span>
+              </div>
+              ${scientificName ? `<h6 class="card-subtitle text-muted fst-italic small mb-2 text-truncate">${scientificName}</h6>` : ""}
+              
+              <div class="small text-muted border-top pt-2 mt-1 geo-info">
+                ${geoInfo ? `<i class="bi bi-geo-alt me-1"></i>${geoInfo}` : ""}
+              </div>
+            </div>
           </div>
-          ${scientificName ? `<h6 class="card-subtitle text-muted fst-italic small mb-3">${scientificName}</h6>` : ""}
-          
-          ${geoInfo ? `<div class="small text-muted border-top pt-2 mt-2"><i class="bi bi-geo-alt me-1"></i>${geoInfo}</div>` : ""}
         </div>
-      </div>
-    `;
-    container.appendChild(col);
+      `;
+      container.appendChild(cardCol);
+    }
+  });
+
+  // REMOVE old cards not in top list
+  existingCards.forEach((node, key) => {
+    if (!newKeys.has(key)) {
+      node.remove();
+    }
   });
 }
 

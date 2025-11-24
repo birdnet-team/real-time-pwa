@@ -4,6 +4,7 @@ const MODEL_VERSION = "v2.4"; // Increment only when model files change
 
 const APP_CACHE_NAME = `birdnet-app-${APP_VERSION}`;
 const MODEL_CACHE_NAME = `birdnet-model-${MODEL_VERSION}`;
+const IMAGE_CACHE_NAME = "birdnet-images-v1";
 
 // Dev flags
 const ENABLE_CACHING = true;
@@ -110,12 +111,32 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
 
+  const url = new URL(request.url);
+
+  // Strategy: Cache First for BirdNET API Images
+  if (url.href.startsWith("https://birdnet.cornell.edu/api2/bird/")) {
+    event.respondWith((async () => {
+      const cache = await caches.open(IMAGE_CACHE_NAME);
+      const cached = await cache.match(request);
+      if (cached) return cached;
+      
+      try {
+        const net = await fetch(request);
+        if (net.ok) cache.put(request, net.clone());
+        return net;
+      } catch {
+        // Return transparent pixel or nothing on offline fail
+        return new Response("", { status: 404 });
+      }
+    })());
+    return;
+  }
+
   if (!ENABLE_CACHING) {
     event.respondWith(fetch(request).catch(() => new Response("Offline (caching disabled)", { status: 503 })));
     return;
   }
 
-  const url = new URL(request.url);
   const scopePath = new URL(self.registration.scope).pathname;
   let rel = url.pathname.startsWith(scopePath)
     ? url.pathname.slice(scopePath.length)
