@@ -1,5 +1,5 @@
 // Versioning
-const APP_VERSION = "v0.1.8";
+const APP_VERSION = "v0.1.9";
 const MODEL_VERSION = "v2.4"; // Increment only when model files change
 
 const APP_CACHE_NAME = `birdnet-app-${APP_VERSION}`;
@@ -21,6 +21,7 @@ const CORE_URLS = [
   "manifest.webmanifest",
   "img/birdnet-logo-circle.png",
   "img/qrcode.png",
+  "img/dummy.webp",
   "css/main.css",
   "vendor/bootstrap/bootstrap.min.css",
   "vendor/bootstrap-icons/bootstrap-icons.css",

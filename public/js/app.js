@@ -843,7 +843,7 @@ function renderDetections(pooled) {
                    alt="${commonName}"
                    loading="lazy"
                    style="width: 100%; height: 100%; object-fit: cover;"
-                   onerror="this.style.display='none'">
+                   onerror="this.onerror=null; this.src='img/dummy.webp';">
             </div>
             <div class="card-body py-2 px-3 flex-grow-1">
               <div class="d-flex justify-content-between align-items-start mb-1">
@@ -916,7 +916,7 @@ function renderExploreList(list) {
                  alt="${common}"
                  loading="lazy"
                  style="width: 100%; height: 100%; object-fit: cover;"
-                 onerror="this.style.display='none'">
+                 onerror="this.onerror=null; this.src='img/dummy.webp';">
           </div>
           <div class="card-body py-2 px-3 flex-grow-1">
             <div class="d-flex justify-content-between align-items-start mb-1">
