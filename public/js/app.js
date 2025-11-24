@@ -115,9 +115,12 @@ let geoWatchId = null;
 // Load initial state from storage (default true)
 let geoEnabled = store.getBool("bn_geo_enabled", true);
 
-let detectionThreshold = store.getFloat("bn_threshold", 0.25);
-// Sanity check: if stored value was corrupted (e.g. 25 instead of 0.25), reset it
-if (detectionThreshold > 1.0) detectionThreshold = 0.25;
+let detectionThreshold = store.getFloat("bn_threshold", 0.15);
+if (detectionThreshold > 1.0) detectionThreshold = 0.15;
+
+// New: Geo occurrence threshold (default 5%)
+let geoThreshold = store.getFloat("bn_geo_threshold", 0.05);
+let lastSpeciesList = null; // Cache for re-filtering
 
 let latestDetections = [];
 let inputGain = store.getFloat("bn_input_gain", 1.0);
@@ -294,8 +297,12 @@ function requestSpeciesList() {
 }
 
 function renderExploreList(list) {
+  // Cache list if provided, otherwise use cache
+  if (list) lastSpeciesList = list;
+  const sourceList = list || lastSpeciesList;
+
   const container = document.getElementById("exploreList");
-  if (!container || !list) return;
+  if (!container || !sourceList) return;
 
   // Guard: If no geolocation, do not render the massive list
   if (!geolocation || !geoEnabled) {
@@ -308,18 +315,15 @@ function renderExploreList(list) {
     return;
   }
 
-  // Filter and sort
-  // If geo is enabled, sort by geoscore. If disabled, maybe alphabetical?
-  // Default to geoscore desc
-  const sorted = list
-    .filter(item => item.geoscore > 0.05) // Hide extremely unlikely
-    .sort((a, b) => b.geoscore - a.geoscore)
-    //.slice(0, 100); // Limit to top 100
+  // Filter and sort using dynamic threshold
+  const sorted = sourceList
+    .filter(item => item.geoscore >= geoThreshold) 
+    .sort((a, b) => b.geoscore - a.geoscore);
 
   container.innerHTML = "";
   
   if (sorted.length === 0) {
-    container.innerHTML = `<div class="col-12 text-center text-muted">No species found for this location/threshold.</div>`;
+    container.innerHTML = `<div class="col-12 text-center text-muted py-5">No species found with probability ≥ ${Math.round(geoThreshold * 100)}%.<br>Try lowering the threshold.</div>`;
     return;
   }
 
@@ -400,6 +404,16 @@ function initUIControls() {
       }
     });
   }
+
+  // New: Bind Geo Threshold Slider
+  bindRange("geoThresholdRange", geoThreshold * 100, (v) => {
+    geoThreshold = v / 100;
+    store.set("bn_geo_threshold", geoThreshold);
+    // Re-render list if on explore page
+    if (document.getElementById("exploreList")) {
+      renderExploreList(null); // uses cached lastSpeciesList
+    }
+  }, (v) => `${Math.round(v)}%`);
 
   bindRange("durationRange", spectroDurationSec, (v) => {
     spectroDurationSec = v;

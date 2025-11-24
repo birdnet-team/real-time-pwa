@@ -48,11 +48,19 @@ permalink: "/explore/"
   </div>
   
   <div class="settings-drawer-body">
-    <h6 class="text-uppercase text-muted fw-bold mb-3">Detection & Model</h6>
+    <h6 class="text-uppercase text-muted fw-bold mb-3">Geomodel</h6>
     <div class="mb-3 p-3 bg-light rounded-3">
       <div class="form-check form-switch">
         <input class="form-check-input" type="checkbox" id="geoToggle" checked>
         <label class="form-check-label fw-semibold" for="geoToggle">Use geolocation</label>
+      </div>
+      
+      <div class="mt-3 pt-3 border-top">
+        <label for="geoThresholdRange" class="form-label small text-muted">Occurrence Threshold</label>
+        <input type="range" class="form-range" id="geoThresholdRange" min="1" max="25" step="1">
+        <div class="form-text small">
+          Show species with ≥ <span class="form-range-value" id="geoThresholdValue">5%</span> probability
+        </div>
       </div>
     </div>
 
