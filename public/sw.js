@@ -1,9 +1,13 @@
-const CACHE_NAME = "birdnet-rt-v0.1.1";
-const MODEL_CACHE = CACHE_NAME + "-model";
+// Versioning
+const APP_VERSION = "v0.1.2";
+const MODEL_VERSION = "v2.4"; // Increment only when model files change
+
+const APP_CACHE_NAME = `birdnet-app-${APP_VERSION}`;
+const MODEL_CACHE_NAME = `birdnet-model-${MODEL_VERSION}`;
 
 // Dev flags
-const ENABLE_CACHING = true;        // set false to disable all caching
-const FORCE_CLEAR_ON_ACTIVATE = false; // set true to nuke old caches every reload
+const ENABLE_CACHING = true;
+const FORCE_CLEAR_ON_ACTIVATE = false;
 
 // All core local assets
 const CORE_URLS = [
@@ -59,15 +63,22 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
   if (!ENABLE_CACHING) return;
   event.waitUntil((async () => {
-    const core = await caches.open(CACHE_NAME);
-    await core.addAll(CORE_URLS);
-    const modelCache = await caches.open(MODEL_CACHE);
+    // Cache App Core
+    const appCache = await caches.open(APP_CACHE_NAME);
+    await appCache.addAll(CORE_URLS);
+    
+    // Cache Model (separately)
+    const modelCache = await caches.open(MODEL_CACHE_NAME);
     for (const url of MODEL_URLS) {
-      try {
-        const resp = await fetch(url, { cache: "no-cache" });
-        if (resp.ok) await modelCache.put(url, resp);
-      } catch (e) {
-        console.warn("[SW] Model precache skipped:", url);
+      // Check if already cached to avoid re-fetching large files
+      const match = await modelCache.match(url);
+      if (!match) {
+        try {
+          const resp = await fetch(url, { cache: "no-cache" });
+          if (resp.ok) await modelCache.put(url, resp);
+        } catch (e) {
+          console.warn("[SW] Model precache skipped:", url);
+        }
       }
     }
   })());
@@ -78,7 +89,8 @@ self.addEventListener("activate", (event) => {
     if (!ENABLE_CACHING || FORCE_CLEAR_ON_ACTIVATE) {
       await purgeAllCaches();
     } else {
-      const keep = new Set([CACHE_NAME, MODEL_CACHE]);
+      // Keep only current app version and current model version
+      const keep = new Set([APP_CACHE_NAME, MODEL_CACHE_NAME]);
       const keys = await caches.keys();
       await Promise.all(keys.filter(k => !keep.has(k)).map(k => caches.delete(k)));
     }
@@ -109,14 +121,13 @@ self.addEventListener("fetch", (event) => {
     ? url.pathname.slice(scopePath.length)
     : url.pathname.replace(/^\/+/, "");
 
+  // Strategy: Cache First for Model
   if (MODEL_URLS.includes(rel)) {
     event.respondWith((async () => {
-      const cache = await caches.open(MODEL_CACHE);
+      const cache = await caches.open(MODEL_CACHE_NAME);
       const cached = await cache.match(rel);
-      if (cached) {
-        fetch(request).then(r => r.ok && cache.put(rel, r)).catch(()=>{});
-        return cached;
-      }
+      if (cached) return cached;
+      
       const net = await fetch(request);
       if (net.ok) cache.put(rel, net.clone());
       return net;
@@ -124,26 +135,30 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Strategy: Stale-While-Revalidate for App Core
   if (CORE_URLS.includes(rel)) {
     event.respondWith((async () => {
-      const cache = await caches.open(CACHE_NAME);
+      const cache = await caches.open(APP_CACHE_NAME);
       const cached = await cache.match(rel);
-      if (cached) {
-        fetch(request).then(r => r.ok && cache.put(rel, r)).catch(()=>{});
-        return cached;
-      }
-      const net = await fetch(request);
-      if (net.ok) cache.put(rel, net.clone());
-      return net;
+      
+      const fetchPromise = fetch(request).then(networkResponse => {
+        if (networkResponse.ok) {
+          cache.put(rel, networkResponse.clone());
+        }
+        return networkResponse;
+      }).catch(() => { /* eat errors if cached exists */ });
+
+      return cached || fetchPromise;
     })());
     return;
   }
 
+  // Strategy: Network First (fallback to App Cache)
   event.respondWith((async () => {
     try {
       return await fetch(request);
     } catch {
-      const cache = await caches.open(CACHE_NAME);
+      const cache = await caches.open(APP_CACHE_NAME);
       const fallback = await cache.match("./");
       return fallback || Response.error();
     }
