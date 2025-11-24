@@ -11,11 +11,11 @@ Key features:
 *   **Offline Capable**: Once loaded, the app works without an internet connection.
 *   **Cross-Platform**: Runs on desktop and mobile browsers (Chrome, Safari, Firefox, Edge).
 
-⚠️ **Note**: This project is still in active development. Features and performance may vary across devices and browsers. ⚠️
+⚠️ **Note**: This project is still in active development. Features and performance may vary across devices and browsers.
 
 ## Usage
 
-You can access the live version of this project at [https://birdnet-team.github.io/real-time-pwa/](https://birdnet-team.github.io/real-time-pwa/).
+You can access the live version of this project at: [https://birdnet-team.github.io/real-time-pwa/](https://birdnet-team.github.io/real-time-pwa/)
 
 To install the PWA on your device, open the site in a compatible browser (e.g., Chrome, Edge, Firefox) and follow the prompts to add it to your home screen or desktop (choose "Install App" when prompted).
 
