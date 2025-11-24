@@ -1,5 +1,23 @@
-# real-time-pwa
-BirdNET PWA with real-time sound ID running with Tensorflow.js in the browser.
+<div align="center"><img width="300" alt="BirdNET+ logo" src="public/img/birdnet-logo-circle.png"></div>
+
+# real-time-pwa (BirdNET Live)
+
+**BirdNET Live** is a Progressive Web App (PWA) that brings the power of the BirdNET acoustic identification algorithm directly to your web browser. It allows you to identify bird species from their sounds in real-time using your device's microphone (requires microphone permission).
+
+Key features:
+*   **Run offline**: All processing happens locally on your device using TensorFlow.js. No audio data is ever uploaded to a server (models and assets are downloaded once and stored locally).
+*   **Real-Time Identification**: Visualizes sound via a spectrogram and provides instant species predictions.
+*   **Location-Aware**: Uses your device's geolocation (optional) to filter predictions for species likely to be found in your area.
+*   **Offline Capable**: Once loaded, the app works without an internet connection.
+*   **Cross-Platform**: Runs on desktop and mobile browsers (Chrome, Safari, Firefox, Edge).
+
+⚠️ **Note**: This project is still in active development. Features and performance may vary across devices and browsers. ⚠️
+
+## Usage
+
+You can access the live version of this project at [https://birdnet-team.github.io/real-time-pwa/](https://birdnet-team.github.io/real-time-pwa/).
+
+To install the PWA on your device, open the site in a compatible browser (e.g., Chrome, Edge, Firefox) and follow the prompts to add it to your home screen or desktop (choose "Install App" when prompted).
 
 ## Setup
 
