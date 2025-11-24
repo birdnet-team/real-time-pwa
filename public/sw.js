@@ -13,8 +13,14 @@ const FORCE_CLEAR_ON_ACTIVATE = false;
 // All core local assets
 const CORE_URLS = [
   "./",
+  "explore/",
+  "about/",
+  "legal/",
+  "share/",
   "favicon.png",
   "manifest.webmanifest",
+  "img/birdnet-logo-circle.png",
+  "img/qrcode.png",
   "css/main.css",
   "vendor/bootstrap/bootstrap.min.css",
   "vendor/bootstrap-icons/bootstrap-icons.css",
