@@ -184,6 +184,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (isLive) {
     setupRecordButton();
+    initSpectrogramCanvas(); // Initialize canvas size immediately to prevent layout shift
   }
 
   // On Explore page, respect the current geoEnabled state.
@@ -347,8 +348,8 @@ function renderExploreList(list) {
           <div class="card-body py-2 px-3 flex-grow-1">
             <div class="d-flex justify-content-between align-items-start mb-1">
               <div>
-                <h5 class="card-title mb-0 fw-bold text-dark text-truncate" style="max-width: 140px;" title="${common}">${common}</h5>
-                <h6 class="card-subtitle text-muted fst-italic small mt-1 text-truncate">${bird.scientificName}</h6>
+                <h6 class="card-title mb-0 fw-bold text-primary text-truncate" style="max-width: 140px; font-size: 0.95rem;" title="${common}">${common}</h6>
+                <div class="text-muted fst-italic small mt-1 text-truncate" style="font-size: 0.8rem;">${bird.scientificName}</div>
               </div>
               <span class="badge bg-light text-dark border">
                 ${scorePct}%
@@ -902,12 +903,12 @@ function renderDetections(pooled) {
             </div>
             <div class="card-body py-2 px-3 flex-grow-1">
               <div class="d-flex justify-content-between align-items-start mb-1">
-                <h5 class="card-title mb-0 fw-bold text-primary text-truncate" style="max-width: 140px;" title="${commonName}">${commonName}</h5>
+                <h6 class="card-title mb-0 fw-bold text-primary text-truncate" style="max-width: 140px; font-size: 0.95rem;" title="${commonName}">${commonName}</h6>
                 <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10">
                   ${confPct}%
                 </span>
               </div>
-              ${scientificName ? `<h6 class="card-subtitle text-muted fst-italic small mb-2 text-truncate">${scientificName}</h6>` : ""}
+              ${scientificName ? `<div class="text-muted fst-italic small mb-2 text-truncate" style="font-size: 0.8rem;">${scientificName}</div>` : ""}
               
               <div class="small text-muted border-top pt-2 mt-1 geo-info">
                 ${geoInfo ? `<i class="bi bi-geo-alt me-1"></i>${geoInfo}` : ""}
