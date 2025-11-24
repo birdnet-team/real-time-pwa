@@ -116,6 +116,9 @@ let geoWatchId = null;
 let geoEnabled = store.getBool("bn_geo_enabled", true);
 
 let detectionThreshold = store.getFloat("bn_threshold", 0.25);
+// Sanity check: if stored value was corrupted (e.g. 25 instead of 0.25), reset it
+if (detectionThreshold > 1.0) detectionThreshold = 0.25;
+
 let latestDetections = [];
 let inputGain = store.getFloat("bn_input_gain", 1.0);
 // Inference timing
@@ -399,10 +402,12 @@ function initUIControls() {
     spectroGain = v;
   }, (v) => `${v.toFixed(1)}×`, "bn_spec_gain");
 
+  // Fix: Handle storage manually for threshold to save float (0.25) instead of slider int (25)
   bindRange("thresholdRange", detectionThreshold * 100, (v) => {
     detectionThreshold = v / 100;
+    store.set("bn_threshold", detectionThreshold);
     renderDetections();
-  }, (v) => `${Math.round(v)}%`, "bn_threshold");
+  }, (v) => `${Math.round(v)}%`); // Removed auto-storage key
 
   bindRange("inputGainRange", inputGain, (v) => {
     inputGain = v;
