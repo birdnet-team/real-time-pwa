@@ -1,16 +1,28 @@
-// Versioning
-const APP_VERSION = "v0.1.11"; // Increment on any app code change
-const MODEL_VERSION = "v2.4"; // Increment only when model files change
+/**
+ * BirdNET Live - Service Worker
+ * Handles offline caching of app assets, model files, and species images.
+ * Implements different caching strategies based on resource type.
+ */
+
+/* =========================================================================
+   1. CONFIGURATION & VERSIONING
+   ========================================================================== */
+
+const APP_VERSION = "v0.1.12";   // Increment on app code changes
+const MODEL_VERSION = "v2.4";    // Increment only when model files change
 
 const APP_CACHE_NAME = `birdnet-app-${APP_VERSION}`;
 const MODEL_CACHE_NAME = `birdnet-model-${MODEL_VERSION}`;
 const IMAGE_CACHE_NAME = "birdnet-images-v1";
 
-// Dev flags
 const ENABLE_CACHING = true;
 const FORCE_CLEAR_ON_ACTIVATE = false;
 
-// All core local assets
+/* =========================================================================
+   2. ASSET MANIFESTS
+   ========================================================================== */
+
+// Core Application Assets (UI, Logic, Styles)
 const CORE_URLS = [
   "./",
   "explore/",
@@ -34,7 +46,7 @@ const CORE_URLS = [
   "js/tfjs-4.14.0.min.js"
 ];
 
-// Model + label assets
+// Model Files & Labels (Large, rarely changed)
 const MODEL_URLS = [
   "models/birdnet/group1-shard1of13.bin",
   "models/birdnet/group1-shard2of13.bin",
@@ -61,24 +73,22 @@ const MODEL_URLS = [
   "models/birdnet/labels/it.txt"
 ];
 
-async function purgeAllCaches() {
-  const keys = await caches.keys();
-  await Promise.all(keys.map(k => caches.delete(k)));
-  console.log("[SW] Caches purged.");
-}
+/* =========================================================================
+   3. LIFECYCLE EVENTS
+   ========================================================================== */
 
 self.addEventListener("install", (event) => {
-  self.skipWaiting();
+  self.skipWaiting(); // Activate immediately
   if (!ENABLE_CACHING) return;
+
   event.waitUntil((async () => {
-    // Cache App Core
+    // 1. Cache App Core
     const appCache = await caches.open(APP_CACHE_NAME);
     await appCache.addAll(CORE_URLS);
     
-    // Cache Model (separately)
+    // 2. Cache Model (separately to avoid re-downloading on app updates)
     const modelCache = await caches.open(MODEL_CACHE_NAME);
     for (const url of MODEL_URLS) {
-      // Check if already cached to avoid re-fetching large files
       const match = await modelCache.match(url);
       if (!match) {
         try {
@@ -97,22 +107,18 @@ self.addEventListener("activate", (event) => {
     if (!ENABLE_CACHING || FORCE_CLEAR_ON_ACTIVATE) {
       await purgeAllCaches();
     } else {
-      // Keep only current app version and current model version
-      const keep = new Set([APP_CACHE_NAME, MODEL_CACHE_NAME]);
+      // Cleanup old caches
+      const keep = new Set([APP_CACHE_NAME, MODEL_CACHE_NAME, IMAGE_CACHE_NAME]);
       const keys = await caches.keys();
       await Promise.all(keys.filter(k => !keep.has(k)).map(k => caches.delete(k)));
     }
-    clients.claim();
+    clients.claim(); // Take control of clients immediately
   })());
 });
 
-self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "PURGE_CACHES") {
-    purgeAllCaches().then(() => {
-      event.source && event.source.postMessage({ type: "PURGE_DONE" });
-    });
-  }
-});
+/* =========================================================================
+   4. FETCH STRATEGIES
+   ========================================================================== */
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
@@ -120,75 +126,106 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
 
-  // Strategy: Cache First for BirdNET API Images
+  // A. External API Images (BirdNET API) -> Cache First
   if (url.href.startsWith("https://birdnet.cornell.edu/api2/bird/")) {
-    event.respondWith((async () => {
-      const cache = await caches.open(IMAGE_CACHE_NAME);
-      const cached = await cache.match(request);
-      if (cached) return cached;
-      
-      try {
-        const net = await fetch(request);
-        if (net.ok) cache.put(request, net.clone());
-        return net;
-      } catch {
-        // Return transparent pixel or nothing on offline fail
-        return new Response("", { status: 404 });
-      }
-    })());
+    event.respondWith(handleImageFetch(request));
     return;
   }
 
   if (!ENABLE_CACHING) {
-    event.respondWith(fetch(request).catch(() => new Response("Offline (caching disabled)", { status: 503 })));
+    event.respondWith(fetch(request).catch(() => new Response("Offline", { status: 503 })));
     return;
   }
 
+  // Determine relative path for local assets
   const scopePath = new URL(self.registration.scope).pathname;
   let rel = url.pathname.startsWith(scopePath)
     ? url.pathname.slice(scopePath.length)
     : url.pathname.replace(/^\/+/, "");
 
-  // Strategy: Cache First for Model
+  // B. Model Files -> Cache First
   if (MODEL_URLS.includes(rel)) {
-    event.respondWith((async () => {
-      const cache = await caches.open(MODEL_CACHE_NAME);
-      const cached = await cache.match(rel);
-      if (cached) return cached;
-      
-      const net = await fetch(request);
-      if (net.ok) cache.put(rel, net.clone());
-      return net;
-    })());
+    event.respondWith(handleCacheFirst(request, MODEL_CACHE_NAME, rel));
     return;
   }
 
-  // Strategy: Stale-While-Revalidate for App Core
+  // C. Core App Assets -> Stale-While-Revalidate
   if (CORE_URLS.includes(rel)) {
-    event.respondWith((async () => {
-      const cache = await caches.open(APP_CACHE_NAME);
-      const cached = await cache.match(rel);
-      
-      const fetchPromise = fetch(request).then(networkResponse => {
-        if (networkResponse.ok) {
-          cache.put(rel, networkResponse.clone());
-        }
-        return networkResponse;
-      }).catch(() => { /* eat errors if cached exists */ });
-
-      return cached || fetchPromise;
-    })());
+    event.respondWith(handleStaleWhileRevalidate(request, APP_CACHE_NAME, rel));
     return;
   }
 
-  // Strategy: Network First (fallback to App Cache)
-  event.respondWith((async () => {
-    try {
-      return await fetch(request);
-    } catch {
-      const cache = await caches.open(APP_CACHE_NAME);
-      const fallback = await cache.match("./");
-      return fallback || Response.error();
+  // D. Navigation/Others -> Network First with Fallback
+  event.respondWith(handleNetworkFirst(request));
+});
+
+/* =========================================================================
+   5. STRATEGY IMPLEMENTATIONS
+   ========================================================================== */
+
+async function handleImageFetch(request) {
+  const cache = await caches.open(IMAGE_CACHE_NAME);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  
+  try {
+    const net = await fetch(request);
+    if (net.ok) cache.put(request, net.clone());
+    return net;
+  } catch {
+    return new Response("", { status: 404 }); // Fail silently
+  }
+}
+
+async function handleCacheFirst(request, cacheName, relPath) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(relPath || request);
+  if (cached) return cached;
+  
+  const net = await fetch(request);
+  if (net.ok) cache.put(relPath || request, net.clone());
+  return net;
+}
+
+async function handleStaleWhileRevalidate(request, cacheName, relPath) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(relPath || request);
+  
+  const fetchPromise = fetch(request).then(networkResponse => {
+    if (networkResponse.ok) {
+      cache.put(relPath || request, networkResponse.clone());
     }
-  })());
+    return networkResponse;
+  }).catch(() => { /* ignore network errors if cached */ });
+
+  return cached || fetchPromise;
+}
+
+async function handleNetworkFirst(request) {
+  try {
+    return await fetch(request);
+  } catch {
+    const cache = await caches.open(APP_CACHE_NAME);
+    // Fallback to root for navigation
+    const fallback = await cache.match("./");
+    return fallback || Response.error();
+  }
+}
+
+/* =========================================================================
+   6. UTILITIES
+   ========================================================================== */
+
+async function purgeAllCaches() {
+  const keys = await caches.keys();
+  await Promise.all(keys.map(k => caches.delete(k)));
+  console.log("[SW] Caches purged.");
+}
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "PURGE_CACHES") {
+    purgeAllCaches().then(() => {
+      event.source && event.source.postMessage({ type: "PURGE_DONE" });
+    });
+  }
 });
