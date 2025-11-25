@@ -67,27 +67,33 @@ permalink: "/"
         <label for="labelLangSelect" class="form-label">Label language</label>
         <select id="labelLangSelect" class="form-select"></select>
       </div>
-      <div class="col-6">
-        <label for="thresholdRange" class="form-label">Threshold</label>
-        <input type="range" class="form-range" id="thresholdRange" min="1" max="95" step="1">
-        <div class="form-text small">
-          ≥ <span class="form-range-value" id="thresholdValue">15%</span>
+      
+      <!-- Threshold -->
+      <div class="col-12">
+        <div class="d-flex justify-content-between">
+          <label for="thresholdRange" class="form-label">Threshold</label>
+          <span class="small text-muted">≥ <span class="form-range-value" id="thresholdValue">15%</span></span>
         </div>
+        <input type="range" class="form-range" id="thresholdRange" min="5" max="95" step="5">
       </div>
-      <div class="col-6">
-        <label for="inputGainRange" class="form-label">Mic Gain</label>
-        <input type="range" class="form-range" id="inputGainRange" min="0.5" max="3.0" step="0.1">
-        <div class="form-text small">
-          <span class="form-range-value" id="inputGainValue">1.0×</span>
+
+      <!-- Sensitivity -->
+      <div class="col-12">
+        <div class="d-flex justify-content-between">
+          <label for="sensitivityRange" class="form-label">Sensitivity</label>
+          <span class="small text-muted"><span class="form-range-value" id="sensitivityValue">1.0</span></span>
         </div>
-      </div>
-      <div class="col-6">
-        <label for="sensitivityRange" class="form-label">Sensitivity</label>
         <input type="range" class="form-range" id="sensitivityRange" min="0.5" max="1.5" step="0.1">
-        <div class="form-text small">
-          <span class="form-range-value" id="sensitivityValue">1.0</span>
-        </div>
       </div>
+
+      <!-- Mic Gain -->
+      <div class="col-12">
+        <div class="d-flex justify-content-between">
+          <label for="inputGainRange" class="form-label">Mic Gain</label>
+          <span class="small text-muted"><span class="form-range-value" id="inputGainValue">1.0×</span></span>
+        </div>
+        <input type="range" class="form-range" id="inputGainRange" min="0.5" max="3.0" step="0.1">
+      </div>      
     </div>
 
     <hr class="my-4 opacity-25">
@@ -96,14 +102,17 @@ permalink: "/"
     <h6 class="text-uppercase text-muted fw-bold mb-3">Spectrogram</h6>
 
     <div class="row g-3">
-      <div class="col-6">
-        <label for="durationRange" class="form-label">Duration</label>
-        <input type="range" class="form-range" id="durationRange" min="5" max="60" step="1">
-        <div class="form-text small">
-          <span class="form-range-value" id="durationValue">20&nbsp;s</span>
+      <!-- Duration -->
+      <div class="col-12">
+        <div class="d-flex justify-content-between">
+          <label for="durationRange" class="form-label">Duration</label>
+          <span class="small text-muted"><span class="form-range-value" id="durationValue">20&nbsp;s</span></span>
         </div>
+        <input type="range" class="form-range" id="durationRange" min="5" max="60" step="5">
       </div>
-      <div class="col-6">
+
+      <!-- Colormap -->
+      <div class="col-12">
         <label for="colormapSelect" class="form-label">Colormap</label>
         <select id="colormapSelect" class="form-select">
           <option value="viridis">Viridis</option>
@@ -119,30 +128,42 @@ permalink: "/"
       <div class="col-12 mt-4">
         <label class="form-label fw-semibold mb-0">Frequency Range (Hz)</label>
       </div>
-      <div class="col-6 mt-1">
-        <label for="minFreqRange" class="form-label small text-muted">Min</label>
+      
+      <div class="col-12 mt-1">
+        <div class="d-flex justify-content-between">
+          <label for="minFreqRange" class="form-label small text-muted">Min</label>
+          <span class="small text-muted"><span class="form-range-value" id="minFreqValue">0 Hz</span></span>
+        </div>
         <input type="range" class="form-range" id="minFreqRange" min="0" max="12000" step="100">
-        <div class="form-text small"><span class="form-range-value" id="minFreqValue">0 Hz</span></div>
       </div>
-      <div class="col-6 mt-1">
-        <label for="maxFreqRange" class="form-label small text-muted">Max</label>
+
+      <div class="col-12 mt-1">
+        <div class="d-flex justify-content-between">
+          <label for="maxFreqRange" class="form-label small text-muted">Max</label>
+          <span class="small text-muted"><span class="form-range-value" id="maxFreqValue">12000 Hz</span></span>
+        </div>
         <input type="range" class="form-range" id="maxFreqRange" min="1000" max="15000" step="100">
-        <div class="form-text small"><span class="form-range-value" id="maxFreqValue">12000 Hz</span></div>
       </div>
 
       <!-- Amplitude Group -->
       <div class="col-12 mt-3">
         <label class="form-label fw-semibold mb-0">Amplitude Range (dB)</label>
       </div>
-      <div class="col-6 mt-1">
-        <label for="minDbRange" class="form-label small text-muted">Min (Floor)</label>
-        <input type="range" class="form-range" id="minDbRange" min="-150" max="-50" step="5">
-        <div class="form-text small"><span class="form-range-value" id="minDbValue">-120 dB</span></div>
+
+      <div class="col-12 mt-1">
+        <div class="d-flex justify-content-between">
+          <label for="minDbRange" class="form-label small text-muted">Min (Floor)</label>
+          <span class="small text-muted"><span class="form-range-value" id="minDbValue">-120 dB</span></span>
+        </div>
+        <input type="range" class="form-range" id="minDbRange" min="-180" max="-50" step="5">
       </div>
-      <div class="col-6 mt-1">
-        <label for="maxDbRange" class="form-label small text-muted">Max (Ceiling)</label>
-        <input type="range" class="form-range" id="maxDbRange" min="-60" max="0" step="5">
-        <div class="form-text small"><span class="form-range-value" id="maxDbValue">-40 dB</span></div>
+
+      <div class="col-12 mt-1">
+        <div class="d-flex justify-content-between">
+          <label for="maxDbRange" class="form-label small text-muted">Max (Ceiling)</label>
+          <span class="small text-muted"><span class="form-range-value" id="maxDbValue">-40 dB</span></span>
+        </div>
+        <input type="range" class="form-range" id="maxDbRange" min="-80" max="0" step="5">
       </div>
     </div>
     
