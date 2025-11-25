@@ -137,8 +137,14 @@ async function main() {
 
       const audioTensor = tf.tensor2d(framed, [numFrames, windowSize]);
       const resTensor = birdModel.predict(audioTensor);
-      const predictionList = await resTensor.array(); // shape [numFrames, numClasses]
+      let predictionList = await resTensor.array(); // shape [numFrames, numClasses]
       resTensor.dispose(); audioTensor.dispose();
+
+      // Apply Sensitivity (Logit Transform)
+      const sensitivity = parseFloat(data.sensitivity || 1.0);
+      if (sensitivity !== 1.0) {
+        predictionList = applySensitivity(predictionList, sensitivity);
+      }
 
       // Cache for geo updates
       lastPredictionList = predictionList;
@@ -263,6 +269,21 @@ async function main() {
       postMessage({ message: 'species_list', list });
     }
   };
+}
+
+/**
+ * Applies sensitivity adjustment by transforming probabilities back to logits,
+ * applying a bias, and transforming back to probabilities.
+ * Bias is scaled so that sensitivity 1.5 adds ~1.0 to logits.
+ */
+function applySensitivity(list, sensitivity) {
+  const bias = (sensitivity - 1.0) * 5.0; 
+  return list.map(row => row.map(p => {
+    // Clamp to avoid Infinity in logit calculation
+    const pp = Math.max(1e-7, Math.min(1 - 1e-7, p));
+    const logit = Math.log(pp / (1 - pp));
+    return 1 / (1 + Math.exp(-(logit + bias)));
+  }));
 }
 
 /* STFT kernel */

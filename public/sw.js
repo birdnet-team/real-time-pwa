@@ -1,5 +1,5 @@
 // Versioning
-const APP_VERSION = "v0.1.10"; // Increment on any app code change
+const APP_VERSION = "v0.1.11"; // Increment on any app code change
 const MODEL_VERSION = "v2.4"; // Increment only when model files change
 
 const APP_CACHE_NAME = `birdnet-app-${APP_VERSION}`;

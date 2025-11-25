@@ -145,6 +145,7 @@ let geoEnabled = store.getBool("bn_geo_enabled", true);
 let detectionThreshold = store.getFloat("bn_threshold", 0.15);
 if (detectionThreshold > 1.0) detectionThreshold = 0.15; // Sanity check
 let inputGain = store.getFloat("bn_input_gain", 1.0);
+let sensitivity = store.getFloat("bn_sensitivity", 1.0); // New: Sensitivity
 let geoThreshold = store.getFloat("bn_geo_threshold", 0.05);
 
 /* ==========================================================================
@@ -420,7 +421,13 @@ function startInferenceLoop() {
       
       lastInferenceStart = performance.now();
       birdnetWorker.postMessage(
-        { message: "predict", pcmAudio: windowed, overlapSec: 1.5, ...geoCtx },
+        { 
+          message: "predict", 
+          pcmAudio: windowed, 
+          overlapSec: 1.5, 
+          sensitivity: sensitivity, // Pass sensitivity to worker
+          ...geoCtx 
+        },
         [windowed.buffer]
       );
     }
@@ -660,6 +667,10 @@ function initUIControls() {
   bindRange("inputGainRange", inputGain, (v) => {
     inputGain = v;
   }, (v) => `${v.toFixed(1)}×`, "bn_input_gain");
+
+  bindRange("sensitivityRange", sensitivity, (v) => {
+    sensitivity = v;
+  }, (v) => v.toFixed(1), "bn_sensitivity");
 
   bindRange("minFreqRange", spectroMinFreq, (v) => {
     spectroMinFreq = Math.min(v, spectroMaxFreq - 100);
