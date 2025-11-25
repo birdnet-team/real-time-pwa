@@ -213,6 +213,10 @@ function initWorker(langOverride) {
     try { birdnetWorker.terminate(); } catch (_) {}
     birdnetWorker = null;
     workerReady = false;
+    
+    // Disable record button while reloading
+    const btn = recordButtonEl();
+    if (btn) btn.disabled = true;
   }
   
   const prefix = (window.PATH_PREFIX || "/");
@@ -243,6 +247,11 @@ function initWorker(langOverride) {
         workerReady = true;
         const s = statusEl();
         if (s) s.textContent = "Model ready. Tap 'Start' to record.";
+        
+        // Enable record button
+        const btn = recordButtonEl();
+        if (btn) btn.disabled = false;
+
         if (geolocation) sendAreaScores();
         // If on explore page, request list immediately after load
         if (document.getElementById("exploreList")) requestSpeciesList();
@@ -298,6 +307,10 @@ function requestSpeciesList() {
 function setupRecordButton() {
   const btn = recordButtonEl();
   if (!btn) return;
+  
+  // Initially disable until model loads
+  btn.disabled = true;
+  
   btn.addEventListener("click", async () => {
     if (!isListening) {
       await startListening();
