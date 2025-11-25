@@ -48,6 +48,7 @@ let workerReady = false;
 let birdnetWorker = null;
 let audioContext;
 let scriptNode;
+let gainNode; 
 let circularBuffer;
 let circularWriteIndex = 0;
 let currentStream;
@@ -386,6 +387,10 @@ function stopListening() {
     scriptNode.onaudioprocess = null;
     scriptNode = null;
   }
+  if (gainNode) {
+    gainNode.disconnect();
+    gainNode = null;
+  }
   if (audioContext) {
     stopSpectrogram();
     audioContext.close();
@@ -397,18 +402,27 @@ function setupAudioGraphFromStream(stream) {
   audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE });
   const source = audioContext.createMediaStreamSource(stream);
   
-  // Start visualizer
-  startSpectrogram(source);
+  // Create Gain Node (Hardware-like gain)
+  gainNode = audioContext.createGain();
+  gainNode.gain.value = inputGain;
+  
+  // Connect Mic -> Gain
+  source.connect(gainNode);
+
+  // Start visualizer (Connect Gain -> Spectrogram)
+  startSpectrogram(gainNode);
 
   // Setup circular buffer for inference
   circularBuffer = new Float32Array(WINDOW_SAMPLES);
   circularWriteIndex = 0;
 
-  // Use ScriptProcessor for raw audio access (AudioWorklet would be cleaner but more complex setup)
+  // Use ScriptProcessor for raw audio access
   const scriptBufferSize = 2048;
   scriptNode = audioContext.createScriptProcessor(scriptBufferSize, 1, 1);
-  source.connect(scriptNode);
-  scriptNode.connect(audioContext.destination); // Needed for script processor to run
+  
+  // Connect Gain -> ScriptProcessor -> Destination
+  gainNode.connect(scriptNode);
+  scriptNode.connect(audioContext.destination);
 
   scriptNode.onaudioprocess = (ev) => {
     const input = ev.inputBuffer.getChannelData(0);
@@ -456,9 +470,10 @@ function startInferenceLoop() {
 function getCurrentWindow() {
   if (!circularBuffer) return null;
   const result = new Float32Array(WINDOW_SAMPLES);
-  let idx = circularWriteIndex; // Start reading from the oldest sample (current write head)
+  let idx = circularWriteIndex; 
   for (let i = 0; i < WINDOW_SAMPLES; i++) {
-    result[i] = Math.max(-1, Math.min(1, circularBuffer[idx] * inputGain));
+    // Gain is already applied by GainNode, just clamp to prevent clipping artifacts in model
+    result[i] = Math.max(-1, Math.min(1, circularBuffer[idx]));
     idx = (idx + 1) % circularBuffer.length;
   }
   return result;
@@ -679,6 +694,8 @@ function initUIControls() {
 
   bindRange("inputGainRange", inputGain, (v) => {
     inputGain = v;
+    // Apply gain immediately if listening
+    if (gainNode) gainNode.gain.value = v;
   }, (v) => `${v.toFixed(1)}×`, "bn_input_gain");
 
   bindRange("sensitivityRange", sensitivity, (v) => {
