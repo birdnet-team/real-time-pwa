@@ -534,10 +534,20 @@ function resizeSpectrogramCanvas() {
 
   if (snapshot) spectroCtx.putImageData(snapshot, 0, 0);
 
-  // Resize Axis Overlay
+  // Resize Axis Overlay (High DPI support)
   if (spectroAxisCanvas) {
-    spectroAxisCanvas.width = cssW;
-    spectroAxisCanvas.height = cssH;
+    const dpr = window.devicePixelRatio || 1;
+    // Set physical size based on DPR
+    spectroAxisCanvas.width = Math.floor(cssW * dpr);
+    spectroAxisCanvas.height = Math.floor(cssH * dpr);
+    
+    // Set CSS size to match layout
+    spectroAxisCanvas.style.width = `${cssW}px`;
+    spectroAxisCanvas.style.height = `${cssH}px`;
+    
+    // Scale context so drawing operations use CSS pixels
+    spectroAxisCtx.scale(dpr, dpr);
+    
     drawSpectrogramAxis();
   }
 
@@ -548,8 +558,9 @@ function resizeSpectrogramCanvas() {
 function drawSpectrogramAxis() {
   if (!spectroAxisCtx || !spectroAxisCanvas) return;
   const ctx = spectroAxisCtx;
-  const w = spectroAxisCanvas.width;
-  const h = spectroAxisCanvas.height;
+  // Use logical CSS dimensions for drawing
+  const w = spectroAxisCanvas.clientWidth;
+  const h = spectroAxisCanvas.clientHeight;
 
   ctx.clearRect(0, 0, w, h);
   
