@@ -660,7 +660,7 @@ function drawSpectrogram() {
   const nyquist = SAMPLE_RATE / 2;
   const startBin = Math.max(0, Math.floor((spectroMinFreq / nyquist) * bufferLength));
   const endBin = Math.min(bufferLength - 1, Math.floor((spectroMaxFreq / nyquist) * bufferLength));
-  const binRange = endBin - startBin;
+  const binCount = endBin - startBin + 1;
 
   // Draw new columns
   for (let c = 0; c < columnsNeeded; c++) {
@@ -682,13 +682,20 @@ function drawSpectrogram() {
       norm = Math.pow(norm, 0.8);
 
       // Map to Y pixels (flip Y so low freq is at bottom)
+      // Calculate exact pixel boundaries for this bin to prevent gaps
       const relIndex = i - startBin;
-      const yPct = relIndex / binRange;
-      const y = h - (yPct * h);
-      const barHeight = Math.max(1, h / binRange);
+      
+      // yBottom is the lower edge of the bin (lower frequency, higher Y pixel value)
+      const yBottom = h * (1 - relIndex / binCount);
+      // yTop is the upper edge of the bin (higher frequency, lower Y pixel value)
+      const yTop = h * (1 - (relIndex + 1) / binCount);
+      
+      // Snap to integer pixels to avoid sub-pixel rendering gaps
+      const yDraw = Math.floor(yTop);
+      const hDraw = Math.ceil(yBottom) - yDraw;
 
       spectroCtx.fillStyle = colormapFn(norm);
-      spectroCtx.fillRect(x, y - barHeight, 1, barHeight);
+      spectroCtx.fillRect(x, yDraw, 1, hDraw);
     }
   }
 }
