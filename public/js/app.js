@@ -61,6 +61,7 @@ let latestDetections = [];
 
 // Spectrogram State
 let spectroCanvas, spectroCtx;
+let spectroAxisCanvas, spectroAxisCtx; // Overlay for axis
 let spectroAnimationId = null;
 let analyser;
 let dataArray; // Float32 array for dB values
@@ -137,6 +138,7 @@ let spectroMinDb = store.getFloat("bn_spec_min_db", -120);
 let spectroMaxDb = store.getFloat("bn_spec_max_db", -40);
 let spectroDurationSec = store.getFloat("bn_spec_duration", SPECTRO_DEFAULT_DURATION_SEC);
 let spectroGain = store.getFloat("bn_spec_gain", SPECTRO_DEFAULT_GAIN);
+let spectroAxisTicks = store.getFloat("bn_spec_axis_ticks", 9); 
 let colormapName = store.get("bn_colormap", "viridis");
 let colormapFn = d3.interpolateViridis; // Updated in init
 
@@ -487,6 +489,23 @@ function initSpectrogramCanvas() {
   if (spectroCanvas) return;
   spectroCanvas = document.getElementById("liveSpectrogram");
   if (!spectroCanvas) return;
+
+  // Create Axis Overlay if it doesn't exist
+  if (!spectroAxisCanvas) {
+    const parent = spectroCanvas.parentElement;
+    if (parent) {
+      parent.style.position = "relative"; // Ensure positioning context
+      spectroAxisCanvas = document.createElement("canvas");
+      spectroAxisCanvas.className = "spectro-axis-overlay";
+      spectroAxisCanvas.style.position = "absolute";
+      spectroAxisCanvas.style.top = "0";
+      spectroAxisCanvas.style.left = "0";
+      spectroAxisCanvas.style.pointerEvents = "none"; // Let clicks pass through
+      spectroAxisCanvas.style.zIndex = "10"; // Above spectrogram
+      parent.appendChild(spectroAxisCanvas);
+      spectroAxisCtx = spectroAxisCanvas.getContext("2d");
+    }
+  }
   
   resizeSpectrogramCanvas();
   window.addEventListener("resize", resizeSpectrogramCanvas);
@@ -508,14 +527,62 @@ function resizeSpectrogramCanvas() {
   spectroCanvas.width = cssW;
   spectroCanvas.height = cssH;
 
-  spectroCtx = spectroCanvas.getContext("2d");
+  // Optimize for frequent readback (resizing)
+  spectroCtx = spectroCanvas.getContext("2d", { willReadFrequently: true });
   spectroCtx.fillStyle = "#000";
   spectroCtx.fillRect(0, 0, cssW, cssH);
 
   if (snapshot) spectroCtx.putImageData(snapshot, 0, 0);
 
+  // Resize Axis Overlay
+  if (spectroAxisCanvas) {
+    spectroAxisCanvas.width = cssW;
+    spectroAxisCanvas.height = cssH;
+    drawSpectrogramAxis();
+  }
+
   spectroColumnSeconds = cssW > 0 ? spectroDurationSec / cssW : 0.05;
   lastSpectroColumnTime = audioContext ? audioContext.currentTime : 0;
+}
+
+function drawSpectrogramAxis() {
+  if (!spectroAxisCtx || !spectroAxisCanvas) return;
+  const ctx = spectroAxisCtx;
+  const w = spectroAxisCanvas.width;
+  const h = spectroAxisCanvas.height;
+
+  ctx.clearRect(0, 0, w, h);
+  
+  // Background strip for legibility
+  ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+  ctx.fillRect(0, 0, 40, h);
+
+  ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+  ctx.font = "10px system-ui, -apple-system, sans-serif";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+
+  const numSteps = spectroAxisTicks;
+  const range = spectroMaxFreq - spectroMinFreq;
+
+  for (let i = 0; i <= numSteps; i++) {
+    const ratio = i / numSteps;
+    const freq = spectroMinFreq + (range * ratio);
+    // Canvas Y is inverted (0 is top/high freq)
+    const y = h - (ratio * h);
+    
+    // Adjust text position to avoid clipping
+    let textY = y;
+    if (i === 0) textY -= 6;
+    if (i === numSteps) textY += 6;
+
+    ctx.fillText(`${(freq/1000).toFixed(1)}k`, 32, textY);
+    
+    // Tick mark
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.fillRect(34, y, 6, 1);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+  }
 }
 
 function startSpectrogram(source) {
@@ -704,11 +771,18 @@ function initUIControls() {
 
   bindRange("minFreqRange", spectroMinFreq, (v) => {
     spectroMinFreq = Math.min(v, spectroMaxFreq - 100);
+    drawSpectrogramAxis();
   }, (v) => `${Math.round(v)} Hz`, "bn_spec_min_freq");
 
   bindRange("maxFreqRange", spectroMaxFreq, (v) => {
     spectroMaxFreq = Math.max(v, spectroMinFreq + 100);
+    drawSpectrogramAxis();
   }, (v) => `${Math.round(v)} Hz`, "bn_spec_max_freq");
+
+  bindRange("axisTicksRange", spectroAxisTicks, (v) => {
+    spectroAxisTicks = v;
+    drawSpectrogramAxis();
+  }, (v) => `${v}`, "bn_spec_axis_ticks");
 
   bindRange("minDbRange", spectroMinDb, (v) => {
     spectroMinDb = Math.min(v, spectroMaxDb - 10);

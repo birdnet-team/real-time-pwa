@@ -8,7 +8,7 @@
    1. CONFIGURATION & VERSIONING
    ========================================================================== */
 
-const APP_VERSION = "v0.1.14";   // Increment on app code changes
+const APP_VERSION = "v0.1.15";   // Increment on app code changes
 const MODEL_VERSION = "v2.4";    // Increment only when model files change
 
 const APP_CACHE_NAME = `birdnet-app-${APP_VERSION}`;
