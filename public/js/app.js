@@ -47,8 +47,8 @@ let isListening = false;
 let workerReady = false;
 let birdnetWorker = null;
 let audioContext;
-let scriptNode;
-let gainNode; 
+let workletNode;
+let gainNode;
 let circularBuffer;
 let circularWriteIndex = 0;
 let currentStream;
@@ -352,7 +352,7 @@ async function startListening() {
       }
     });
 
-    setupAudioGraphFromStream(currentStream);
+    await setupAudioGraphFromStream(currentStream);
     statusEl().textContent = "Listening…";
   } catch (e) {
     console.error(e);
@@ -384,10 +384,10 @@ function stopListening() {
     currentStream.getTracks().forEach(t => t.stop());
     currentStream = null;
   }
-  if (scriptNode) {
-    scriptNode.disconnect();
-    scriptNode.onaudioprocess = null;
-    scriptNode = null;
+  if (workletNode) {
+    workletNode.port.onmessage = null;
+    workletNode.disconnect();
+    workletNode = null;
   }
   if (gainNode) {
     gainNode.disconnect();
@@ -400,8 +400,13 @@ function stopListening() {
   }
 }
 
-function setupAudioGraphFromStream(stream) {
-  audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE });
+async function setupAudioGraphFromStream(stream) {
+  audioContext = new AudioContext({ sampleRate: SAMPLE_RATE });
+
+  // Resume if suspended (browser requirements)
+  if (audioContext.state === "suspended") {
+    await audioContext.resume();
+  }
   const source = audioContext.createMediaStreamSource(stream);
   
   // Create Gain Node (Hardware-like gain)
@@ -418,21 +423,36 @@ function setupAudioGraphFromStream(stream) {
   circularBuffer = new Float32Array(WINDOW_SAMPLES);
   circularWriteIndex = 0;
 
-  // Use ScriptProcessor for raw audio access
-  const scriptBufferSize = 2048;
-  scriptNode = audioContext.createScriptProcessor(scriptBufferSize, 1, 1);
-  
-  // Connect Gain -> ScriptProcessor -> Destination
-  gainNode.connect(scriptNode);
-  scriptNode.connect(audioContext.destination);
+  if (!audioContext.audioWorklet) {
+    statusEl().textContent = "Browser too old. Please update.";
+    return;
+  }
 
-  scriptNode.onaudioprocess = (ev) => {
-    const input = ev.inputBuffer.getChannelData(0);
-    for (let i = 0; i < input.length; i++) {
-      circularBuffer[circularWriteIndex] = input[i];
-      circularWriteIndex = (circularWriteIndex + 1) % circularBuffer.length;
-    }
-  };
+  // Use AudioWorklet for raw audio access (Replaces ScriptProcessor)
+  try {
+    const prefix = (window.PATH_PREFIX || "/");
+    await audioContext.audioWorklet.addModule(prefix + "js/audio-processor.js");
+
+    workletNode = new AudioWorkletNode(audioContext, "audio-processor");
+
+    // Handle audio data from the worklet
+    workletNode.port.onmessage = (event) => {
+      const input = event.data;
+      for (let i = 0; i < input.length; i++) {
+        circularBuffer[circularWriteIndex] = input[i];
+        circularWriteIndex = (circularWriteIndex + 1) % circularBuffer.length;
+      }
+    };
+
+    // Connect Gain -> Worklet -> Destination
+    gainNode.connect(workletNode);
+    workletNode.connect(audioContext.destination);
+
+  } catch (err) {
+    console.error("Failed to load AudioWorklet", err);
+    statusEl().textContent = "Audio setup failed. Please refresh the page.";
+    return;
+  }
 
   startInferenceLoop();
 }
