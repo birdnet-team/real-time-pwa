@@ -887,6 +887,8 @@ function setupSettingsToggle() {
   const drawer = settingsDrawerEl();
   const overlay = settingsOverlayEl();
   const closeBtn = document.getElementById("settingsClose");
+  const closeBtnBottom = document.getElementById("settingsCloseBottom");
+
   if (!toggle || !drawer) return;
 
   const setState = (open) => {
@@ -909,6 +911,8 @@ function setupSettingsToggle() {
 
   if (overlay) overlay.addEventListener("click", () => setState(false));
   if (closeBtn) closeBtn.addEventListener("click", () => setState(false));
+  if (closeBtnBottom) closeBtnBottom.addEventListener("click", () => setState(false));
+  
   document.addEventListener("keydown", (evt) => {
     if (evt.key === "Escape") setState(false);
   });
