@@ -145,6 +145,10 @@ async function loadTranslations(lang) {
     store.set("bn_ui_lang", lang);
     updateUIText();
     
+    // Re-render dynamic lists to apply new translations
+    renderDetections(latestDetections);
+    if (document.getElementById("exploreList")) renderExploreList();
+
     // Update selector if it exists
     const selector = document.getElementById("uiLangSelect");
     if (selector) selector.value = lang;
@@ -178,7 +182,8 @@ function updateUIText() {
  * Helper to get a translated string.
  */
 function t(key, ...args) {
-  let str = translations[key] || key;
+  let str = translations[key];
+  if (!str) return "";
   args.forEach((arg, i) => {
     str = str.replace(`{${i}}`, arg);
   });
