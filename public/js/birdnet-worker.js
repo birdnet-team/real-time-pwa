@@ -230,7 +230,7 @@ async function init() {
   postMessage({ message: 'loaded' });
 }
 
-async function loadLabels() {
+async function loadLabels(langOverride) {
   const navigatorLang = params.get('lang');
   const supportedLanguages = [
     'af', 'da', 'en_us', 'fr', 'ja', 'no', 'ro', 'sl', 'tr', 'ar', 'de', 'es', 'hu',
@@ -239,6 +239,7 @@ async function loadLabels() {
   
   // Determine language
   const lang = (() => {
+    if (langOverride) return langOverride;
     const req = params.get('lang');
     if (req) return req;
     if (!navigatorLang) return 'en_us';
@@ -256,7 +257,7 @@ async function loadLabels() {
   }
 
   // Merge into objects
-  birds = birdsList.map((base, i) => {
+  const newBirds = birdsList.map((base, i) => {
     const i18nLine = birdsListI18n[i] || base;
     const [sciBase, comBase] = base.split('_');
     const [sciLoc, comLoc] = i18nLine.split('_');
@@ -267,6 +268,15 @@ async function loadLabels() {
       commonNameI18n: comLoc || comBase || base
     };
   });
+
+  // Preserve geoscores if we already had birds loaded
+  if (birds.length === newBirds.length) {
+    for (let i = 0; i < birds.length; i++) {
+      newBirds[i].geoscore = birds[i].geoscore;
+    }
+  }
+
+  birds = newBirds;
 }
 
 /* ==========================================================================
@@ -280,6 +290,10 @@ onmessage = async ({ data }) => {
       break;
     case 'area-scores':
       await handleAreaScores(data);
+      break;
+    case 'load_labels':
+      await loadLabels(data.lang);
+      postMessage({ message: 'labels_loaded', lang: data.lang });
       break;
     case 'get_species_list':
       postMessage({ 

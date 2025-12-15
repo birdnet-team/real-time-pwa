@@ -326,6 +326,11 @@ function initWorker(langOverride) {
         }
         break;
         
+      case "labels_loaded":
+        updateStatus("status_ready");
+        requestSpeciesList();
+        break;
+
       case "loaded":
         workerReady = true;
         updateStatus("status_ready");
@@ -968,10 +973,13 @@ function initUIControls() {
       store.set("bn_lang", currentLabelLang);
       latestDetections = [];
       renderDetections([]);
-      updateStatus("status_reloading_model");
-      const wasListening = isListening;
-      if (wasListening) stopListening();
-      initWorker(currentLabelLang);
+      
+      if (birdnetWorker && workerReady) {
+        updateStatus("status_reloading_model");
+        birdnetWorker.postMessage({ message: 'load_labels', lang: currentLabelLang });
+      } else {
+        initWorker(currentLabelLang);
+      }
     });
   }
 }
