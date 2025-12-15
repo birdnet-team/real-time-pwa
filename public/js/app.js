@@ -1022,6 +1022,14 @@ function setupSettingsToggle() {
   if (!toggle || !drawer) return;
 
   const setState = (open) => {
+    // Manage focus to avoid "aria-hidden" violation
+    if (!open) {
+      // If closing and focus is inside, move it back to toggle
+      if (drawer.contains(document.activeElement)) {
+        toggle.focus();
+      }
+    }
+
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
     drawer.setAttribute("aria-hidden", open ? "false" : "true");
     drawer.classList.toggle("open", open);
@@ -1029,6 +1037,11 @@ function setupSettingsToggle() {
     if (overlay) {
       overlay.classList.toggle("active", open);
       overlay.setAttribute("aria-hidden", open ? "false" : "true");
+    }
+
+    if (open) {
+      // If opening, move focus to close button
+      if (closeBtn) closeBtn.focus();
     }
   };
 
