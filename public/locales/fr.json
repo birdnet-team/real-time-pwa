@@ -33,6 +33,7 @@
   "lbl_label_lang": "Langue des étiquettes",
   "lbl_threshold": "Seuil",
   "lbl_sensitivity": "Sensibilité",
+  "lbl_inference_interval": "Intervalle d'inférence",
   "lbl_mic_gain": "Gain Micro",
   "lbl_rumble_filter": "Filtre de bruit (Passe-haut)",
   "msg_rumble_hint": "Supprime le bruit du vent et de la circulation en dessous de cette fréquence.",

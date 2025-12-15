@@ -33,6 +33,7 @@
   "lbl_label_lang": "Lingua Etichette",
   "lbl_threshold": "Soglia",
   "lbl_sensitivity": "Sensibilità",
+  "lbl_inference_interval": "Intervallo di inferenza",
   "lbl_mic_gain": "Guadagno Mic",
   "lbl_rumble_filter": "Filtro Rumore (Passa-alto)",
   "msg_rumble_hint": "Rimuove il rumore del vento e del traffico sotto questa frequenza.",

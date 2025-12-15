@@ -14,7 +14,6 @@ const WINDOW_SECONDS = 3;
 const WINDOW_SAMPLES = SAMPLE_RATE * WINDOW_SECONDS;
 
 // Inference settings
-const INFERENCE_INTERVAL_MS = 500; // How often to run prediction
 const TEMPORAL_POOL_WINDOW = 5;    // Number of recent predictions to pool
 const USE_TEMPORAL_POOL = true;    // Enable log-mean-exp pooling
 
@@ -228,6 +227,7 @@ let detectionThreshold = store.getFloat("bn_threshold", 0.15);
 if (detectionThreshold > 1.0) detectionThreshold = 0.15; // Sanity check
 let inputGain = store.getFloat("bn_input_gain", 1.0);
 let sensitivity = store.getFloat("bn_sensitivity", 1.0); // New: Sensitivity
+let inferenceInterval = store.getFloat("bn_inference_interval", 500);
 let rumbleFilterFreq = store.getFloat("bn_rumble_freq", 200);
 let geoThreshold = store.getFloat("bn_geo_threshold", 0.05);
 
@@ -587,7 +587,7 @@ function startInferenceLoop() {
       );
     }
     
-    if (isListening) setTimeout(tick, INFERENCE_INTERVAL_MS);
+    if (isListening) setTimeout(tick, inferenceInterval);
   };
   tick();
 }
@@ -921,6 +921,10 @@ function initUIControls() {
   bindRange("sensitivityRange", sensitivity, (v) => {
     sensitivity = v;
   }, (v) => v.toFixed(1), "bn_sensitivity");
+
+  bindRange("inferenceIntervalRange", inferenceInterval, (v) => {
+    inferenceInterval = v;
+  }, (v) => `${Math.round(v)} ms`, "bn_inference_interval");
 
   bindRange("minFreqRange", spectroMinFreq, (v) => {
     spectroMinFreq = Math.min(v, spectroMaxFreq - 100);

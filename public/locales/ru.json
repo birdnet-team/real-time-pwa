@@ -33,6 +33,7 @@
   "lbl_label_lang": "Язык названий",
   "lbl_threshold": "Порог",
   "lbl_sensitivity": "Чувствительность",
+  "lbl_inference_interval": "Интервал анализа",
   "lbl_mic_gain": "Усиление микрофона",
   "lbl_rumble_filter": "Фильтр шума (ВЧ-фильтр)",
   "msg_rumble_hint": "Удаляет шум ветра и транспорта ниже этой частоты.",

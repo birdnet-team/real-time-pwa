@@ -33,6 +33,7 @@
   "lbl_label_lang": "Label Language",
   "lbl_threshold": "Threshold",
   "lbl_sensitivity": "Sensitivity",
+  "lbl_inference_interval": "Inference Interval",
   "lbl_mic_gain": "Mic Gain",
   "lbl_rumble_filter": "Noise Filter (High-Pass)",
   "msg_rumble_hint": "Removes wind and traffic noise below this frequency.",
