@@ -600,12 +600,16 @@ function drawSpectrogramAxis() {
     const ratio = i / numSteps;
     const freq = spectroMinFreq + (range * ratio);
     // Canvas Y is inverted (0 is top/high freq)
-    const y = h - (ratio * h);
+    let y = h - (ratio * h);
     
-    // Adjust text position to avoid clipping
+    // Aesthetic tweak: inset edge ticks so they aren't on the absolute pixel edge
+    if (i === 0) y -= 5;          // Move bottom tick up
+    if (i === numSteps) y += 5;   // Move top tick down
+    
+    // Adjust text position to avoid clipping at edges
     let textY = y;
-    if (i === 0) textY -= 6;
-    if (i === numSteps) textY += 6;
+    if (i === 0) textY -= 5;
+    if (i === numSteps) textY += 5;
 
     ctx.fillText(`${(freq/1000).toFixed(1)}k`, 32, textY);
     
