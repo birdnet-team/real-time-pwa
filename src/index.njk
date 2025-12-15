@@ -60,6 +60,7 @@ permalink: "/"
       <div class="geo-status">
         <span data-i18n="lbl_coordinates">Coordinates</span>: <span class="fw-semibold" id="geoCoordsText">—</span>
       </div>
+      <div class="form-text small mt-2" data-i18n="msg_geo_hint">Filters species based on your current location.</div>
     </div>
 
     <div class="row g-3">
@@ -89,6 +90,7 @@ permalink: "/"
           <span class="small text-muted">≥ <span class="form-range-value" id="thresholdValue">15%</span></span>
         </div>
         <input type="range" class="form-range" id="thresholdRange" min="5" max="95" step="5">
+        <div class="form-text small" data-i18n="msg_threshold_hint">Minimum confidence score required to show a detection.</div>
       </div>
 
       <!-- Sensitivity -->
@@ -98,6 +100,7 @@ permalink: "/"
           <span class="small text-muted"><span class="form-range-value" id="sensitivityValue">1.0</span></span>
         </div>
         <input type="range" class="form-range" id="sensitivityRange" min="0.5" max="1.5" step="0.1">
+        <div class="form-text small" data-i18n="msg_sensitivity_hint">Higher sensitivity detects more birds but may increase false positives.</div>
       </div>
 
       <!-- Inference Interval -->
@@ -107,6 +110,7 @@ permalink: "/"
           <span class="small text-muted"><span class="form-range-value" id="inferenceIntervalValue">500 ms</span></span>
         </div>
         <input type="range" class="form-range" id="inferenceIntervalRange" min="100" max="3000" step="100">
+        <div class="form-text small" data-i18n="msg_inference_interval_hint">How often the model analyzes audio. Lower values are more responsive but use more battery.</div>
       </div>
 
       <!-- Mic Gain -->
@@ -117,6 +121,7 @@ permalink: "/"
         </div>
         <!-- Increased max to 10.0 for distant birds, step 0.5 for easier sliding -->
         <input type="range" class="form-range" id="inputGainRange" min="0.5" max="10.0" step="0.5">
+        <div class="form-text small" data-i18n="msg_mic_gain_hint">Digital volume boost. Use if your microphone is too quiet.</div>
       </div>
 
       <!-- Rumble Filter -->
@@ -143,6 +148,7 @@ permalink: "/"
           <span class="small text-muted"><span class="form-range-value" id="durationValue">20&nbsp;s</span></span>
         </div>
         <input type="range" class="form-range" id="durationRange" min="5" max="60" step="5">
+        <div class="form-text small" data-i18n="msg_duration_hint">Length of the spectrogram history shown on screen.</div>
       </div>
 
       <!-- Colormap -->
@@ -157,6 +163,7 @@ permalink: "/"
           <option value="cubehelix">Cubehelix</option>
         </select>
       </div>
+      <div class="form-text small" data-i18n="msg_colormap_hint">Color scheme used for the spectrogram visualization.</div>
 
       <!-- Frequency Group -->
       <div class="col-12 mt-4">
@@ -187,6 +194,8 @@ permalink: "/"
         <input type="range" class="form-range" id="axisTicksRange" min="2" max="20" step="1">
       </div>
 
+      <div class="form-text small" data-i18n="msg_freq_range_hint">Visible frequency range. Most bird calls are between 1kHz and 10kHz.</div>
+
       <!-- Amplitude Group -->
       <div class="col-12 mt-3">
         <label class="form-label fw-semibold mb-0" data-i18n="lbl_amp_range">Amplitude Range (dB)</label>
@@ -207,6 +216,8 @@ permalink: "/"
         </div>
         <input type="range" class="form-range" id="maxDbRange" min="-80" max="0" step="5">
       </div>
+      
+      <div class="form-text small" data-i18n="msg_amp_range_hint">Visible loudness range. Adjust to increase contrast.</div>
     </div>
     
     <div class="d-grid mt-4">
