@@ -2,7 +2,7 @@
   <div class="container">
     <a class="navbar-brand fw-semibold d-flex align-items-center gap-2" href="{{ '/' | url }}">
       <img src="{{ '/img/birdnet-logo-circle.png' | url }}" alt="BirdNET logo" class="navbar-logo">
-      <span>BirdNET Live</span>
+      <span data-i18n="app_title">BirdNET Live</span>
     </a>
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
@@ -14,16 +14,16 @@
     <nav class="collapse navbar-collapse" id="mainNav">
       <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
         <li class="nav-item">
-          <a class="nav-link{% if page.url == '/' %} active{% endif %}" href="{{ '/' | url }}">Live</a>
+          <a class="nav-link{% if page.url == '/' %} active{% endif %}" href="{{ '/' | url }}" data-i18n="nav_live">Live</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link{% if page.url == '/explore/' %} active{% endif %}" href="{{ '/explore/' | url }}">Explore</a>
+          <a class="nav-link{% if page.url == '/explore/' %} active{% endif %}" href="{{ '/explore/' | url }}" data-i18n="nav_explore">Explore</a>
         </li>        
         <li class="nav-item">
-          <a class="nav-link{% if page.url == '/about/' %} active{% endif %}" href="{{ '/about/' | url }}">About</a>
+          <a class="nav-link{% if page.url == '/about/' %} active{% endif %}" href="{{ '/about/' | url }}" data-i18n="nav_about">About</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link{% if page.url == '/share/' %} active{% endif %}" href="{{ '/share/' | url }}">Share</a>
+          <a class="nav-link{% if page.url == '/share/' %} active{% endif %}" href="{{ '/share/' | url }}" data-i18n="nav_share">Share</a>
         </li>
       </ul>
     </nav>

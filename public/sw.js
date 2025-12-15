@@ -8,7 +8,7 @@
    1. CONFIGURATION & VERSIONING
    ========================================================================== */
 
-const APP_VERSION = "v0.1.17";   // Increment on app code changes
+const APP_VERSION = "v0.1.18";   // Increment on app code changes
 const MODEL_VERSION = "v2.4";    // Increment only when model files change
 
 const APP_CACHE_NAME = `birdnet-app-${APP_VERSION}`;
@@ -43,7 +43,9 @@ const CORE_URLS = [
   "vendor/bootstrap/bootstrap.bundle.min.js",
   "js/app.js",
   "js/birdnet-worker.js",
-  "js/tfjs-4.14.0.min.js"
+  "js/tfjs-4.14.0.min.js",
+  "locales/en.json",
+  "locales/de.json"
 ];
 
 // Model Files & Labels (Large, rarely changed)

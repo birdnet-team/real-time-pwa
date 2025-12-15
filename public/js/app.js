@@ -38,6 +38,10 @@ const LANG_LABELS = {
 };
 const SUPPORTED_LABEL_LANGS = Object.keys(LANG_LABELS);
 
+// UI Translation State
+let currentUiLang = "en";
+let translations = {};
+
 /* ==========================================================================
    2. GLOBAL STATE
    ========================================================================== */
@@ -49,6 +53,7 @@ let birdnetWorker = null;
 let audioContext;
 let workletNode;
 let gainNode;
+let highPassFilterNode;
 let circularBuffer;
 let circularWriteIndex = 0;
 let currentStream;
@@ -127,6 +132,75 @@ function mapBrowserLangToLabelLang(locale) {
   }
 }
 
+/**
+ * Loads UI translations for the specified language.
+ */
+async function loadTranslations(lang) {
+  try {
+    const prefix = window.PATH_PREFIX || "/";
+    const response = await fetch(`${prefix}locales/${lang}.json`);
+    if (!response.ok) throw new Error(`Failed to load ${lang} translations`);
+    translations = await response.json();
+    currentUiLang = lang;
+    store.set("bn_ui_lang", lang);
+    updateUIText();
+    
+    // Update selector if it exists
+    const selector = document.getElementById("uiLangSelect");
+    if (selector) selector.value = lang;
+    
+  } catch (e) {
+    console.error("Translation load error:", e);
+    // Fallback to English if not already English
+    if (lang !== "en") loadTranslations("en");
+  }
+}
+
+/**
+ * Updates all elements with data-i18n attribute.
+ */
+function updateUIText() {
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const key = el.getAttribute("data-i18n");
+    if (translations[key]) {
+      el.innerHTML = translations[key];
+    }
+  });
+  
+  // Update status text if not currently recording/processing
+  // (Dynamic status updates will use the new translation map)
+  if (!isListening && !workerReady) {
+    updateStatus("status_init");
+  }
+}
+
+/**
+ * Helper to get a translated string.
+ */
+function t(key, ...args) {
+  let str = translations[key] || key;
+  args.forEach((arg, i) => {
+    str = str.replace(`{${i}}`, arg);
+  });
+  return str;
+}
+
+/**
+ * Updates the main status text with a translated string.
+ */
+function updateStatus(key, ...args) {
+  const el = statusEl();
+  if (el) {
+    el.textContent = t(key, ...args);
+    // Only set data-i18n if no args, to avoid overwriting dynamic text with static template
+    if (args.length === 0) {
+      el.setAttribute("data-i18n", key);
+    } else {
+      el.removeAttribute("data-i18n");
+    }
+  }
+}
+
 /* ==========================================================================
    4. USER SETTINGS (LOADED FROM STORAGE)
    ========================================================================== */
@@ -149,6 +223,7 @@ let detectionThreshold = store.getFloat("bn_threshold", 0.15);
 if (detectionThreshold > 1.0) detectionThreshold = 0.15; // Sanity check
 let inputGain = store.getFloat("bn_input_gain", 1.0);
 let sensitivity = store.getFloat("bn_sensitivity", 1.0); // New: Sensitivity
+let rumbleFilterFreq = store.getFloat("bn_rumble_freq", 200);
 let geoThreshold = store.getFloat("bn_geo_threshold", 0.05);
 
 /* ==========================================================================
@@ -171,6 +246,12 @@ const settingsOverlayEl = () => document.getElementById("settingsOverlay");
 
 document.addEventListener("DOMContentLoaded", () => {
   updateColormap(colormapName);
+
+  // Initialize Language
+  const savedLang = store.get("bn_ui_lang");
+  const browserLang = navigator.language.split("-")[0];
+  const initialLang = savedLang || (["de", "en"].includes(browserLang) ? browserLang : "en");
+  loadTranslations(initialLang);
   
   const isLive = !!document.getElementById("recordButton");
   const isExplore = !!document.getElementById("exploreList");
@@ -191,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (geoEnabled) {
     getGeolocation();
   } else {
-    updateGeoDisplay("Geolocation disabled.", null);
+    updateGeoDisplay("status_geo_disabled", null);
     if (isExplore) {
       // Show hint instead of full list if geo is off
       const container = document.getElementById("exploreList");
@@ -199,7 +280,7 @@ document.addEventListener("DOMContentLoaded", () => {
         container.innerHTML = `
           <div class="col-12 text-center py-5 text-muted">
             <i class="bi bi-geo-alt-slash fs-1 d-block mb-3 opacity-25"></i>
-            <p>Enable geolocation in Settings to see local species.</p>
+            <p data-i18n="msg_explore_geo_disabled">${t("msg_explore_geo_disabled")}</p>
           </div>
         `;
       }
@@ -229,7 +310,7 @@ function initWorker(langOverride) {
   const params = new URLSearchParams({ tf: tfPath, root, lang });
   
   const status = statusEl();
-  if (status) status.textContent = "Loading BirdNET… 0%";
+  if (status) updateStatus("status_loading_percent", 0);
   
   birdnetWorker = new Worker(prefix + "js/birdnet-worker.js?" + params.toString());
 
@@ -241,15 +322,13 @@ function initWorker(langOverride) {
       case "load_geomodel":
       case "load_labels":
         if (typeof data.progress === "number") {
-          const s = statusEl();
-          if (s) s.textContent = `Loading BirdNET… ${data.progress}%`;
+          updateStatus("status_loading_percent", data.progress);
         }
         break;
         
       case "loaded":
         workerReady = true;
-        const s = statusEl();
-        if (s) s.textContent = "Model ready. Tap 'Start' to record.";
+        updateStatus("status_ready");
         
         // Enable record button
         const btn = recordButtonEl();
@@ -275,7 +354,7 @@ function initWorker(langOverride) {
         
         if (isListening && lastInferenceStart) {
           lastInferenceMs = Math.round(performance.now() - lastInferenceStart);
-          statusEl().textContent = `Listening… (Inference took ${lastInferenceMs} ms)`;
+          updateStatus("status_listening_inference", lastInferenceMs);
         }
         break;
 
@@ -292,8 +371,7 @@ function initWorker(langOverride) {
 
   birdnetWorker.onerror = (err) => {
     console.error("Worker error", err);
-    const s = statusEl();
-    if (s) s.textContent = "BirdNET worker error. Refresh page.";
+    updateStatus("status_worker_error");
   };
 }
 
@@ -325,7 +403,7 @@ function setupRecordButton() {
 
 async function startListening() {
   if (!workerReady) {
-    statusEl().textContent = "BirdNET model is still loading…";
+    updateStatus("status_loading");
     return;
   }
   try {
@@ -335,11 +413,14 @@ async function startListening() {
     const button = recordButtonEl();
     if (button) button.classList.add("recording");
     const label = recordLabelTextEl();
-    if (label) label.textContent = "Stop";
+    if (label) {
+      label.textContent = t("btn_stop");
+      label.setAttribute("data-i18n", "btn_stop");
+    }
     const spinner = document.getElementById("listeningIndicator");
     if (spinner) spinner.classList.remove("d-none");
     
-    statusEl().textContent = "Requesting microphone access…";
+    updateStatus("status_requesting_mic");
     await requestWakeLock();
 
     currentStream = await navigator.mediaDevices.getUserMedia({
@@ -353,10 +434,10 @@ async function startListening() {
     });
 
     await setupAudioGraphFromStream(currentStream);
-    statusEl().textContent = "Listening…";
+    updateStatus("status_listening");
   } catch (e) {
     console.error(e);
-    statusEl().textContent = "Microphone access failed.";
+    updateStatus("status_mic_failed");
     stopListening(); // Cleanup UI state
   }
 }
@@ -369,11 +450,14 @@ function stopListening() {
   const button = recordButtonEl();
   if (button) button.classList.remove("recording");
   const label = recordLabelTextEl();
-  if (label) label.textContent = "Start";
+  if (label) {
+    label.textContent = t("btn_start");
+    label.setAttribute("data-i18n", "btn_start");
+  }
   const spinner = document.getElementById("listeningIndicator");
   if (spinner) spinner.classList.add("d-none");
 
-  statusEl().textContent = "Stopped. Tap 'Start' to resume.";
+  updateStatus("status_stopped");
 
   // Reset State
   lastInferenceStart = 0;
@@ -392,6 +476,10 @@ function stopListening() {
   if (gainNode) {
     gainNode.disconnect();
     gainNode = null;
+  }
+  if (highPassFilterNode) {
+    highPassFilterNode.disconnect();
+    highPassFilterNode = null;
   }
   if (audioContext) {
     stopSpectrogram();
@@ -413,18 +501,25 @@ async function setupAudioGraphFromStream(stream) {
   gainNode = audioContext.createGain();
   gainNode.gain.value = inputGain;
   
-  // Connect Mic -> Gain
-  source.connect(gainNode);
+  // Create High-Pass Filter (Rumble Filter)
+  highPassFilterNode = audioContext.createBiquadFilter();
+  highPassFilterNode.type = "highpass";
+  highPassFilterNode.frequency.value = rumbleFilterFreq;
+  highPassFilterNode.Q.value = 0.707; // Butterworth
 
-  // Start visualizer (Connect Gain -> Spectrogram)
-  startSpectrogram(gainNode);
+  // Connect Mic -> Gain -> HighPass
+  source.connect(gainNode);
+  gainNode.connect(highPassFilterNode);
+
+  // Start visualizer (Connect HighPass -> Spectrogram)
+  startSpectrogram(highPassFilterNode);
 
   // Setup circular buffer for inference
   circularBuffer = new Float32Array(WINDOW_SAMPLES);
   circularWriteIndex = 0;
 
   if (!audioContext.audioWorklet) {
-    statusEl().textContent = "Browser too old. Please update.";
+    updateStatus("status_browser_old");
     return;
   }
 
@@ -445,12 +540,13 @@ async function setupAudioGraphFromStream(stream) {
     };
 
     // Connect Gain -> Worklet -> Destination
-    gainNode.connect(workletNode);
+    // gainNode.connect(workletNode); // OLD
+    highPassFilterNode.connect(workletNode);
     workletNode.connect(audioContext.destination);
 
   } catch (err) {
     console.error("Failed to load AudioWorklet", err);
-    statusEl().textContent = "Audio setup failed. Please refresh the page.";
+    updateStatus("status_audio_failed");
     return;
   }
 
@@ -749,7 +845,7 @@ function initUIControls() {
       store.set("bn_geo_enabled", geoEnabled);
 
       if (geoEnabled) {
-        updateGeoDisplay("Requesting geolocation…", null);
+        updateGeoDisplay("status_geo_requesting", null);
         getGeolocation();
       } else {
         geolocation = null;
@@ -757,7 +853,7 @@ function initUIControls() {
           navigator.geolocation.clearWatch(geoWatchId);
           geoWatchId = null;
         }
-        updateGeoDisplay("Geolocation disabled.", null);
+        updateGeoDisplay("status_geo_disabled", null);
         
         // Handle Explore page state change
         if (document.getElementById("exploreList")) {
@@ -765,7 +861,7 @@ function initUIControls() {
            container.innerHTML = `
             <div class="col-12 text-center py-5 text-muted">
               <i class="bi bi-geo-alt-slash fs-1 d-block mb-3 opacity-25"></i>
-              <p>Enable geolocation in Settings to see local species.</p>
+              <p data-i18n="msg_explore_geo_disabled">${t("msg_explore_geo_disabled")}</p>
             </div>
           `;
         } else {
@@ -807,6 +903,11 @@ function initUIControls() {
     if (gainNode) gainNode.gain.value = v;
   }, (v) => `${v.toFixed(1)}×`, "bn_input_gain");
 
+  bindRange("rumbleFilterRange", rumbleFilterFreq, (v) => {
+    rumbleFilterFreq = v;
+    if (highPassFilterNode) highPassFilterNode.frequency.value = v;
+  }, (v) => `${Math.round(v)} Hz`, "bn_rumble_freq");
+
   bindRange("sensitivityRange", sensitivity, (v) => {
     sensitivity = v;
   }, (v) => v.toFixed(1), "bn_sensitivity");
@@ -845,6 +946,14 @@ function initUIControls() {
     });
   }
 
+  const uiLangSelect = document.getElementById("uiLangSelect");
+  if (uiLangSelect) {
+    uiLangSelect.value = currentUiLang;
+    uiLangSelect.addEventListener("change", () => {
+      loadTranslations(uiLangSelect.value);
+    });
+  }
+
   const langSelect = document.getElementById("labelLangSelect");
   if (langSelect) {
     langSelect.innerHTML = SUPPORTED_LABEL_LANGS
@@ -859,7 +968,7 @@ function initUIControls() {
       store.set("bn_lang", currentLabelLang);
       latestDetections = [];
       renderDetections([]);
-      statusEl().textContent = "Reloading model for language…";
+      updateStatus("status_reloading_model");
       const wasListening = isListening;
       if (wasListening) stopListening();
       initWorker(currentLabelLang);
@@ -946,8 +1055,8 @@ function renderDetections(pooled) {
     container.innerHTML = `
       <div class="col-12 text-center text-muted py-5">
         <i class="bi bi-soundwave fs-1 d-block mb-3 opacity-25"></i>
-        <p>No detections above ${Math.round(detectionThreshold * 100)}% confidence.</p>
-        ${useGeoFilter ? "<small>Geo filter active.</small>" : ""}
+        <p>${t("msg_no_detections", Math.round(detectionThreshold * 100))}</p>
+        ${useGeoFilter ? `<small>${t("msg_geo_active")}</small>` : ""}
       </div>
     `;
     return;
@@ -970,7 +1079,7 @@ function renderDetections(pooled) {
   top.forEach((p, index) => {
     const confPct = (p.confidence * 100).toFixed(1);
     const geoInfo = useGeoFilter && typeof p.geoscore === "number"
-      ? `Geo score: ${(p.geoscore * 100).toFixed(1)}%`
+      ? t("lbl_geo_score", (p.geoscore * 100).toFixed(1))
       : "";
     const commonName = p.commonNameI18n || p.commonName || `Class ${p.index}`;
     const scientificName = p.scientificName || "";
@@ -1045,7 +1154,7 @@ function renderExploreList(list) {
     container.innerHTML = `
       <div class="col-12 text-center py-5 text-muted">
         <i class="bi bi-geo-alt-slash fs-1 d-block mb-3 opacity-25"></i>
-        <p>Enable geolocation in Settings to see local species.</p>
+        <p data-i18n="msg_explore_geo_disabled">${t("msg_explore_geo_disabled")}</p>
       </div>
     `;
     return;
@@ -1058,7 +1167,7 @@ function renderExploreList(list) {
   container.innerHTML = "";
   
   if (sorted.length === 0) {
-    container.innerHTML = `<div class="col-12 text-center text-muted py-5">No species found with probability ≥ ${Math.round(geoThreshold * 100)}%.<br>Try lowering the threshold.</div>`;
+    container.innerHTML = `<div class="col-12 text-center text-muted py-5">${t("msg_explore_no_species", Math.round(geoThreshold * 100))}<br>${t("msg_explore_lower_threshold")}</div>`;
     return;
   }
 
@@ -1106,10 +1215,13 @@ function renderExploreList(list) {
    11. GEOLOCATION
    ========================================================================== */
 
-function updateGeoDisplay(message, coords) {
+function updateGeoDisplay(key, coords) {
   const status = geoStatusEl();
   const coordsEl = geoCoordsEl();
-  if (status) status.textContent = message;
+  if (status) {
+    status.textContent = t(key);
+    status.setAttribute("data-i18n", key);
+  }
   if (coordsEl) {
     coordsEl.textContent = coords
       ? `${coords.lat.toFixed(4)}, ${coords.lon.toFixed(4)} (±${Math.round(coords.accuracy)}m)`
@@ -1119,14 +1231,14 @@ function updateGeoDisplay(message, coords) {
 
 function getGeolocation() {
   if (!navigator.geolocation) {
-    updateGeoDisplay("Geolocation not supported.", null);
+    updateGeoDisplay("status_geo_unsupported", null);
     return;
   }
   if (geoWatchId !== null) {
     navigator.geolocation.clearWatch(geoWatchId);
     geoWatchId = null;
   }
-  updateGeoDisplay("Requesting geolocation…", null);
+  updateGeoDisplay("status_geo_requesting", null);
 
   geoWatchId = navigator.geolocation.watchPosition(
     (pos) => {
@@ -1136,14 +1248,14 @@ function getGeolocation() {
         accuracy: pos.coords.accuracy,
         timestamp: pos.timestamp
       };
-      updateGeoDisplay("Location acquired.", geolocation);
+      updateGeoDisplay("status_geo_acquired", geolocation);
       sendAreaScores();
       renderDetections(); // re-filter with geo prior active
     },
     (err) => {
       console.warn("Geolocation error", err);
       geolocation = null;
-      updateGeoDisplay("Geolocation failed.", null);
+      updateGeoDisplay("status_geo_failed", null);
       renderDetections();
     },
     {

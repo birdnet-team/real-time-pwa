@@ -6,7 +6,7 @@ permalink: "/explore/"
 
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">Explore Local Species</h1>
+    <h1 class="h3 mb-0" data-i18n="msg_explore_title">Explore Local Species</h1>
     <button
       id="settingsToggle"
       class="btn btn-link text-secondary text-decoration-none p-0"
@@ -24,7 +24,7 @@ permalink: "/explore/"
       <div class="d-flex align-items-center gap-3">
         <i class="bi bi-geo-alt-fill text-primary fs-4"></i>
         <div>
-          <div id="geoStatusText" class="fw-semibold">Initializing...</div>
+          <div id="geoStatusText" class="fw-semibold" data-i18n="status_geo_waiting">Initializing...</div>
           <div id="geoCoordsText" class="small text-muted">—</div>
         </div>
       </div>
@@ -34,7 +34,7 @@ permalink: "/explore/"
   <div id="exploreList" class="row g-3">
     <div class="col-12 text-center py-5 text-muted">
       <div class="spinner-border mb-3" role="status"></div>
-      <p>Loading model and species list...</p>
+      <p data-i18n="status_loading">Loading model and species list...</p>
     </div>
   </div>
 </div>
@@ -43,29 +43,39 @@ permalink: "/explore/"
 <div id="settingsOverlay" class="settings-overlay" aria-hidden="true"></div>
 <aside id="settingsDrawer" class="settings-drawer" aria-hidden="true">
   <div class="settings-header d-flex justify-content-between align-items-center mb-4">
-    <h5 class="m-0">Settings</h5>
+    <h5 class="m-0" data-i18n="settings_title">Settings</h5>
     <button type="button" class="btn-close" id="settingsClose" aria-label="Close"></button>
   </div>
   
   <div class="settings-drawer-body">
-    <h6 class="text-uppercase text-muted fw-bold mb-3">Geomodel</h6>
+    <h6 class="text-uppercase text-muted fw-bold mb-3" data-i18n="sec_geomodel">Geomodel</h6>
     <div class="mb-3 p-3 bg-light rounded-3">
       <div class="form-check form-switch">
         <input class="form-check-input" type="checkbox" id="geoToggle" checked>
-        <label class="form-check-label fw-semibold" for="geoToggle">Use geolocation</label>
+        <label class="form-check-label fw-semibold" for="geoToggle" data-i18n="lbl_use_geo">Use geolocation</label>
       </div>
       
       <div class="mt-3 pt-3 border-top">
-        <label for="geoThresholdRange" class="form-label small text-muted">Occurrence Threshold</label>
+        <label for="geoThresholdRange" class="form-label small text-muted" data-i18n="lbl_occurrence_threshold">Occurrence Threshold</label>
         <input type="range" class="form-range" id="geoThresholdRange" min="1" max="25" step="1">
         <div class="form-text small">
-          Show species with ≥ <span class="form-range-value" id="geoThresholdValue">5%</span> probability
+          <span data-i18n="msg_occurrence_hint_pre">Show species with ≥ </span>
+          <span class="form-range-value" id="geoThresholdValue">5%</span>
+          <span data-i18n="msg_occurrence_hint_post"> probability</span>
         </div>
       </div>
     </div>
 
     <div class="mb-3">
-      <label for="labelLangSelect" class="form-label">Label language</label>
+      <label for="uiLangSelect" class="form-label" data-i18n="lbl_ui_lang">App Language</label>
+      <select id="uiLangSelect" class="form-select">
+        <option value="en">English</option>
+        <option value="de">Deutsch</option>
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label for="labelLangSelect" class="form-label" data-i18n="lbl_label_lang">Label language</label>
       <select id="labelLangSelect" class="form-select"></select>
     </div>
   </div>

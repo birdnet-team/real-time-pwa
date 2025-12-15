@@ -6,8 +6,8 @@ permalink: "/about/"
 
 <section class="page-header py-5 bg-light border-bottom">
   <div class="container">
-    <h1 class="display-5 fw-bold mb-3">About BirdNET Live</h1>
-    <p class="lead text-muted mb-0">
+    <h1 class="display-5 fw-bold mb-3" data-i18n="about_title">About BirdNET Live</h1>
+    <p class="lead text-muted mb-0" data-i18n="about_subtitle">
       Real-time bird sound identification running entirely in your web browser.
     </p>
   </div>
@@ -18,38 +18,38 @@ permalink: "/about/"
     <div class="row g-5">
       <div class="col-lg-8">
         
-        <h2 class="h3 fw-bold mb-3">What is this demo?</h2>
-        <p>
+        <h2 class="h3 fw-bold mb-3" data-i18n="about_demo_title">What is this demo?</h2>
+        <p data-i18n="about_demo_p1">
           <strong>BirdNET Live</strong> is an experimental Progressive Web App (PWA) that demonstrates the capabilities of modern web browsers to run sophisticated machine learning models. Unlike the official BirdNET app which runs natively on Android/iOS, this version runs inside Chrome, Safari, or Firefox using <strong>TensorFlow.js</strong>.
         </p>
-        <p>
+        <p data-i18n="about_demo_p2">
           This means you can identify birds on your laptop, tablet, or phone without installing an app store application, and—crucially—<strong>without sending any audio data to a server</strong>.
         </p>
 
         <hr class="my-5">
 
-        <h2 class="h3 fw-bold mb-3">What is BirdNET?</h2>
-        <p>
+        <h2 class="h3 fw-bold mb-3" data-i18n="about_birdnet_title">What is BirdNET?</h2>
+        <p data-i18n="about_birdnet_p1">
           BirdNET is a research platform developed jointly by the <strong>K. Lisa Yang Center for Conservation Bioacoustics</strong> at the Cornell Lab of Ornithology and the <strong>Chemnitz University of Technology</strong>.
         </p>
-        <p>
+        <p data-i18n="about_birdnet_p2">
           The project uses artificial neural networks to train computers to identify more than 6,000 of the most common bird species worldwide. It is one of the most advanced tools for acoustic monitoring of birds.
         </p>
         <a href="https://birdnet.cornell.edu/" target="_blank" class="btn btn-outline-primary mt-2">
-          Visit Official BirdNET Website <i class="bi bi-box-arrow-up-right ms-1"></i>
+          <span data-i18n="about_btn_official">Visit Official BirdNET Website</span> <i class="bi bi-box-arrow-up-right ms-1"></i>
         </a>
 
         <hr class="my-5">
 
-        <h2 class="h3 fw-bold mb-3">How the Detection Works</h2>
+        <h2 class="h3 fw-bold mb-3" data-i18n="about_how_title">How the Detection Works</h2>
         <div class="d-flex flex-column gap-4">
           <div class="d-flex gap-3">
             <div class="flex-shrink-0">
               <span class="badge bg-primary rounded-pill fs-5" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">1</span>
             </div>
             <div>
-              <h5 class="fw-semibold">Audio Capture</h5>
-              <p class="text-muted mb-0">Your browser's Web Audio API captures sound from your microphone and resamples it to 48,000 Hz.</p>
+              <h5 class="fw-semibold" data-i18n="about_step1_title">Audio Capture</h5>
+              <p class="text-muted mb-0" data-i18n="about_step1_desc">Your browser's Web Audio API captures sound from your microphone and resamples it to 48,000 Hz.</p>
             </div>
           </div>
           <div class="d-flex gap-3">
@@ -57,8 +57,8 @@ permalink: "/about/"
               <span class="badge bg-primary rounded-pill fs-5" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">2</span>
             </div>
             <div>
-              <h5 class="fw-semibold">Spectrogram Generation</h5>
-              <p class="text-muted mb-0">The audio is sliced into 3-second chunks. These chunks are converted into <strong>Mel Spectrograms</strong>—visual representations of sound that show frequency intensity over time.</p>
+              <h5 class="fw-semibold" data-i18n="about_step2_title">Spectrogram Generation</h5>
+              <p class="text-muted mb-0" data-i18n="about_step2_desc">The audio is sliced into 3-second chunks. These chunks are converted into <strong>Mel Spectrograms</strong>—visual representations of sound that show frequency intensity over time.</p>
             </div>
           </div>
           <div class="d-flex gap-3">
@@ -66,8 +66,8 @@ permalink: "/about/"
               <span class="badge bg-primary rounded-pill fs-5" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">3</span>
             </div>
             <div>
-              <h5 class="fw-semibold">Neural Network Inference</h5>
-              <p class="text-muted mb-0">The spectrogram image is fed into a Convolutional Neural Network (CNN). This model has learned to "see" bird calls in these images, distinguishing them from noise and other animals.</p>
+              <h5 class="fw-semibold" data-i18n="about_step3_title">Neural Network Inference</h5>
+              <p class="text-muted mb-0" data-i18n="about_step3_desc">The spectrogram image is fed into a Convolutional Neural Network (CNN). This model has learned to "see" bird calls in these images, distinguishing them from noise and other animals.</p>
             </div>
           </div>
           <div class="d-flex gap-3">
@@ -75,8 +75,8 @@ permalink: "/about/"
               <span class="badge bg-primary rounded-pill fs-5" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">4</span>
             </div>
             <div>
-              <h5 class="fw-semibold">Post-Processing</h5>
-              <p class="text-muted mb-0">The model outputs probability scores for thousands of species. We apply a <strong>confidence threshold</strong> (e.g., 25%) and optionally a <strong>location filter</strong> to hide birds that are unlikely to be found in your area.</p>
+              <h5 class="fw-semibold" data-i18n="about_step4_title">Post-Processing</h5>
+              <p class="text-muted mb-0" data-i18n="about_step4_desc">The model outputs probability scores for thousands of species. We apply a <strong>confidence threshold</strong> (e.g., 25%) and optionally a <strong>location filter</strong> to hide birds that are unlikely to be found in your area.</p>
             </div>
           </div>
         </div>
@@ -85,8 +85,8 @@ permalink: "/about/"
 
         <div class="row g-4">
           <div class="col-lg-6">
-            <h2 class="section-title h5 fw-bold">Contact</h2>
-            <p class="text-muted">Questions about BirdNET research, tools, or collaborations:</p>
+            <h2 class="section-title h5 fw-bold" data-i18n="about_contact_title">Contact</h2>
+            <p class="text-muted" data-i18n="about_contact_desc">Questions about BirdNET research, tools, or collaborations:</p>
             <p class="text-muted">
               <strong>Email:</strong><br>
               <a href="mailto:ccb-birdnet@cornell.edu">ccb-birdnet@cornell.edu</a>
@@ -97,7 +97,7 @@ permalink: "/about/"
         <hr class="my-5">
 
         <p>
-          <a href="{{ '/legal/' | url }}" class="link-secondary text-decoration-none">
+          <a href="{{ '/legal/' | url }}" class="link-secondary text-decoration-none" data-i18n="about_privacy_link">
             Privacy Policy & Legal Notice
           </a>
         </p>
@@ -107,12 +107,12 @@ permalink: "/about/"
       <div class="col-lg-4">
         <div class="card bg-light border-0 mb-4">
           <div class="card-body p-4">
-            <h2 class="h5 fw-bold mb-4">BirdNET Live on GitHub</h2>
-            <p class="text-muted mb-4">
+            <h2 class="h5 fw-bold mb-4" data-i18n="about_github_title">BirdNET Live on GitHub</h2>
+            <p class="text-muted mb-4" data-i18n="about_github_desc">
               The source code for BirdNET Live is available on GitHub. Feel free to inspect the code, report issues, or contribute improvements!
             </p>
             <a href="https://github.com/birdnet-team/real-time-pwa" target="_blank" class="btn btn-primary">
-              View Repository <i class="bi bi-box-arrow-up-right ms-1"></i>
+              <span data-i18n="about_btn_repo">View Repository</span> <i class="bi bi-box-arrow-up-right ms-1"></i>
             </a>
           </div>
         </div>

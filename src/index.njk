@@ -15,7 +15,7 @@ permalink: "/"
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div class="d-flex align-items-center gap-2">
       <div id="listeningIndicator" class="spinner-grow text-danger spinner-grow-sm d-none" role="status"></div>
-      <span class="small text-muted" id="statusText">Tap 'Start' to record</span>
+      <span class="small text-muted" id="statusText" data-i18n="status_init">Tap 'Start' to record</span>
     </div>
     <button
       id="settingsToggle"
@@ -33,7 +33,7 @@ permalink: "/"
   <div id="detectionsList" class="row g-3">
     <div class="col-12 text-center text-muted py-5">
       <i class="bi bi-soundwave fs-1 d-block mb-3 opacity-25"></i>
-      <p>Detections will appear here.</p>
+      <p data-i18n="msg_detections_placeholder">Detections will appear here.</p>
     </div>
   </div>
 </div>
@@ -42,36 +42,44 @@ permalink: "/"
 <div id="settingsOverlay" class="settings-overlay" aria-hidden="true"></div>
 <aside id="settingsDrawer" class="settings-drawer" aria-hidden="true">
   <div class="settings-header d-flex justify-content-between align-items-center mb-4">
-    <h5 class="m-0">Settings</h5>
+    <h5 class="m-0" data-i18n="settings_title">Settings</h5>
     <button type="button" class="btn-close" id="settingsClose" aria-label="Close"></button>
   </div>
   
   <div class="settings-drawer-body">
     
     <!-- Section: Detection -->
-    <h6 class="text-uppercase text-muted fw-bold mb-3">Detection & Model</h6>
+    <h6 class="text-uppercase text-muted fw-bold mb-3" data-i18n="sec_detection">Detection & Model</h6>
     
     <div class="mb-3 p-3 bg-light rounded-3">
       <div class="form-check form-switch">
         <input class="form-check-input" type="checkbox" id="geoToggle" checked>
-        <label class="form-check-label fw-semibold" for="geoToggle">Use geolocation</label>
+        <label class="form-check-label fw-semibold" for="geoToggle" data-i18n="lbl_use_geo">Use geolocation</label>
       </div>
-      <div class="geo-status mt-1" id="geoStatusText">Awaiting geolocation…</div>
+      <div class="geo-status mt-1" id="geoStatusText" data-i18n="status_geo_waiting">Awaiting geolocation…</div>
       <div class="geo-status">
-        Coordinates: <span class="fw-semibold" id="geoCoordsText">—</span>
+        <span data-i18n="lbl_coordinates">Coordinates</span>: <span class="fw-semibold" id="geoCoordsText">—</span>
       </div>
     </div>
 
     <div class="row g-3">
       <div class="col-12">
-        <label for="labelLangSelect" class="form-label">Label language</label>
+        <label for="uiLangSelect" class="form-label" data-i18n="lbl_ui_lang">App Language</label>
+        <select id="uiLangSelect" class="form-select">
+          <option value="en">English</option>
+          <option value="de">Deutsch</option>
+        </select>
+      </div>
+
+      <div class="col-12">
+        <label for="labelLangSelect" class="form-label" data-i18n="lbl_label_lang">Label language</label>
         <select id="labelLangSelect" class="form-select"></select>
       </div>
       
       <!-- Threshold -->
       <div class="col-12">
         <div class="d-flex justify-content-between">
-          <label for="thresholdRange" class="form-label">Threshold</label>
+          <label for="thresholdRange" class="form-label" data-i18n="lbl_threshold">Threshold</label>
           <span class="small text-muted">≥ <span class="form-range-value" id="thresholdValue">15%</span></span>
         </div>
         <input type="range" class="form-range" id="thresholdRange" min="5" max="95" step="5">
@@ -80,7 +88,7 @@ permalink: "/"
       <!-- Sensitivity -->
       <div class="col-12">
         <div class="d-flex justify-content-between">
-          <label for="sensitivityRange" class="form-label">Sensitivity</label>
+          <label for="sensitivityRange" class="form-label" data-i18n="lbl_sensitivity">Sensitivity</label>
           <span class="small text-muted"><span class="form-range-value" id="sensitivityValue">1.0</span></span>
         </div>
         <input type="range" class="form-range" id="sensitivityRange" min="0.5" max="1.5" step="0.1">
@@ -89,24 +97,34 @@ permalink: "/"
       <!-- Mic Gain -->
       <div class="col-12">
         <div class="d-flex justify-content-between">
-          <label for="inputGainRange" class="form-label">Mic Gain</label>
+          <label for="inputGainRange" class="form-label" data-i18n="lbl_mic_gain">Mic Gain</label>
           <span class="small text-muted"><span class="form-range-value" id="inputGainValue">1.0×</span></span>
         </div>
         <!-- Increased max to 10.0 for distant birds, step 0.5 for easier sliding -->
         <input type="range" class="form-range" id="inputGainRange" min="0.5" max="10.0" step="0.5">
-      </div>      
+      </div>
+
+      <!-- Rumble Filter -->
+      <div class="col-12">
+        <div class="d-flex justify-content-between">
+          <label for="rumbleFilterRange" class="form-label" data-i18n="lbl_rumble_filter">Rumble Filter (High-Pass)</label>
+          <span class="small text-muted"><span class="form-range-value" id="rumbleFilterValue">200 Hz</span></span>
+        </div>
+        <input type="range" class="form-range" id="rumbleFilterRange" min="0" max="1000" step="50">
+        <div class="form-text small" data-i18n="msg_rumble_hint">Removes wind and traffic noise below this frequency.</div>
+      </div>
     </div>
 
     <hr class="my-4 opacity-25">
 
     <!-- Section: Spectrogram -->
-    <h6 class="text-uppercase text-muted fw-bold mb-3">Spectrogram</h6>
+    <h6 class="text-uppercase text-muted fw-bold mb-3" data-i18n="sec_spectrogram">Spectrogram</h6>
 
     <div class="row g-3">
       <!-- Duration -->
       <div class="col-12">
         <div class="d-flex justify-content-between">
-          <label for="durationRange" class="form-label">Duration</label>
+          <label for="durationRange" class="form-label" data-i18n="lbl_duration">Duration</label>
           <span class="small text-muted"><span class="form-range-value" id="durationValue">20&nbsp;s</span></span>
         </div>
         <input type="range" class="form-range" id="durationRange" min="5" max="60" step="5">
@@ -114,7 +132,7 @@ permalink: "/"
 
       <!-- Colormap -->
       <div class="col-12">
-        <label for="colormapSelect" class="form-label">Colormap</label>
+        <label for="colormapSelect" class="form-label" data-i18n="lbl_colormap">Colormap</label>
         <select id="colormapSelect" class="form-select">
           <option value="viridis">Viridis</option>
           <option value="magma">Magma</option>
@@ -127,12 +145,12 @@ permalink: "/"
 
       <!-- Frequency Group -->
       <div class="col-12 mt-4">
-        <label class="form-label fw-semibold mb-0">Frequency Range (Hz)</label>
+        <label class="form-label fw-semibold mb-0" data-i18n="lbl_freq_range">Frequency Range (Hz)</label>
       </div>
       
       <div class="col-12 mt-1">
         <div class="d-flex justify-content-between">
-          <label for="minFreqRange" class="form-label small text-muted">Min</label>
+          <label for="minFreqRange" class="form-label small text-muted" data-i18n="lbl_min">Min</label>
           <span class="small text-muted"><span class="form-range-value" id="minFreqValue">0 Hz</span></span>
         </div>
         <input type="range" class="form-range" id="minFreqRange" min="0" max="2000" step="100">
@@ -140,7 +158,7 @@ permalink: "/"
 
       <div class="col-12 mt-1">
         <div class="d-flex justify-content-between">
-          <label for="maxFreqRange" class="form-label small text-muted">Max</label>
+          <label for="maxFreqRange" class="form-label small text-muted" data-i18n="lbl_max">Max</label>
           <span class="small text-muted"><span class="form-range-value" id="maxFreqValue">12000 Hz</span></span>
         </div>
         <input type="range" class="form-range" id="maxFreqRange" min="4000" max="15000" step="1000">
@@ -148,7 +166,7 @@ permalink: "/"
 
       <div class="col-12 mt-1">
         <div class="d-flex justify-content-between">
-          <label for="axisTicksRange" class="form-label small text-muted">Grid Lines</label>
+          <label for="axisTicksRange" class="form-label small text-muted" data-i18n="lbl_grid_lines">Grid Lines</label>
           <span class="small text-muted"><span class="form-range-value" id="axisTicksValue">9</span></span>
         </div>
         <input type="range" class="form-range" id="axisTicksRange" min="2" max="20" step="1">
@@ -156,12 +174,12 @@ permalink: "/"
 
       <!-- Amplitude Group -->
       <div class="col-12 mt-3">
-        <label class="form-label fw-semibold mb-0">Amplitude Range (dB)</label>
+        <label class="form-label fw-semibold mb-0" data-i18n="lbl_amp_range">Amplitude Range (dB)</label>
       </div>
 
       <div class="col-12 mt-1">
         <div class="d-flex justify-content-between">
-          <label for="minDbRange" class="form-label small text-muted">Min (Floor)</label>
+          <label for="minDbRange" class="form-label small text-muted" data-i18n="lbl_min_floor">Min (Floor)</label>
           <span class="small text-muted"><span class="form-range-value" id="minDbValue">-120 dB</span></span>
         </div>
         <input type="range" class="form-range" id="minDbRange" min="-180" max="-50" step="5">
@@ -169,7 +187,7 @@ permalink: "/"
 
       <div class="col-12 mt-1">
         <div class="d-flex justify-content-between">
-          <label for="maxDbRange" class="form-label small text-muted">Max (Ceiling)</label>
+          <label for="maxDbRange" class="form-label small text-muted" data-i18n="lbl_max_ceiling">Max (Ceiling)</label>
           <span class="small text-muted"><span class="form-range-value" id="maxDbValue">-40 dB</span></span>
         </div>
         <input type="range" class="form-range" id="maxDbRange" min="-80" max="0" step="5">
@@ -177,7 +195,7 @@ permalink: "/"
     </div>
     
     <div class="d-grid mt-4">
-      <button type="button" class="btn btn-secondary" id="settingsCloseBottom">Close</button>
+      <button type="button" class="btn btn-secondary" id="settingsCloseBottom" data-i18n="btn_close">Close</button>
     </div>
 
     <div class="pb-5"></div> <!-- Spacer for bottom scroll -->

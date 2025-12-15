@@ -5,7 +5,7 @@ permalink: "/share/"
 ---
 
 <div class="container py-5 text-center">
-  <h1 class="h3 fw-bold mb-4">Share BirdNET Live</h1>
+  <h1 class="h3 fw-bold mb-4" data-i18n="share_title">Share BirdNET Live</h1>
   
   <div class="card border-0 shadow-sm d-inline-block p-4 mb-4">
     <img src="{{ '/img/qrcode.png' | url }}" 
@@ -14,13 +14,13 @@ permalink: "/share/"
          style="max-width: 400px; height: auto;">
   </div>
 
-  <p class="lead text-muted mb-4">
+  <p class="lead text-muted mb-4" data-i18n="share_desc">
     Scan this code to open the app on another device.
   </p>
 
   <div class="d-grid gap-2 col-md-6 mx-auto">
-    <button class="btn btn-outline-primary" onclick="if(navigator.share) navigator.share({title: 'BirdNET Live', text: 'Check out this real-time bird ID app!', url: window.location.origin})">
-      <i class="bi bi-share-fill me-2"></i> Share Link
+    <button class="btn btn-outline-primary" onclick="if(navigator.share) navigator.share({title: 'BirdNET Live', text: t('share_msg_text'), url: window.location.origin})">
+      <i class="bi bi-share-fill me-2"></i> <span data-i18n="share_btn_link">Share Link</span>
     </button>
   </div>
 </div>
