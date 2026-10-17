@@ -70,3 +70,9 @@ Without these partnerships, this project would not have been possible.
 Thank you!
 
 ![Our partners](https://tuc.cloud/index.php/s/KSdWfX5CnSRpRgQ/download/box_logos.png)
+
+## Species photos
+
+Species cards first try the Cornell photo endpoint. If a photo is unavailable, an optional iNaturalist lookup requests the scientific name (without audio or location), requires an exact taxon-name match and a credited Creative Commons photo, and displays the returned attribution with a link to the original photo and its license. Lookups are deduplicated and limited to three simultaneous requests. Missing photos, offline lookups and rejected requests fall back to the app's local placeholder.
+
+Run photo fallback regression tests with `node --test tests/*.test.cjs` (Node.js 20 or later).

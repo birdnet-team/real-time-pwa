@@ -1140,10 +1140,11 @@ function renderDetections(pooled) {
           <div class="d-flex h-100">
             <div class="flex-shrink-0 position-relative" style="width: 90px; background-color: #f8f9fa;">
               <img src="${imgUrl}" 
+                   data-bird-species="${encodeURIComponent(scientificName)}"
                    alt="${commonName}"
                    loading="lazy"
                    style="width: 100%; height: 100%; object-fit: cover;"
-                   onerror="this.onerror=null; this.src='img/dummy.webp';">
+                   onerror="BirdNETPhotos.recover(this);">
             </div>
             <div class="card-body py-2 px-3 flex-grow-1">
               <div class="d-flex justify-content-between align-items-start mb-1">
@@ -1213,10 +1214,11 @@ function renderExploreList(list) {
         <div class="d-flex h-100">
           <div class="flex-shrink-0 position-relative" style="width: 90px; background-color: #f8f9fa;">
             <img src="${imgUrl}" 
+                 data-bird-species="${encodeURIComponent(bird.scientificName)}"
                  alt="${common}"
                  loading="lazy"
                  style="width: 100%; height: 100%; object-fit: cover;"
-                 onerror="this.onerror=null; this.src='img/dummy.webp';">
+                 onerror="BirdNETPhotos.recover(this);">
           </div>
           <div class="card-body py-2 px-3 flex-grow-1">
             <div class="d-flex justify-content-between align-items-start mb-1">
