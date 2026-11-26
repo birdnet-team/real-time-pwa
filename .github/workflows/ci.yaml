@@ -17,6 +17,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history, for the large file check
+      - name: Check for large files
+        # Large files do not belong in git: they stay in its history for good, even
+        # once deleted. Checks every file any commit of the pull request adds or
+        # changes, since a merge commit keeps them all; the largest file in the
+        # repository is 4 MB (V2.4 model shards).
+        shell: bash   # with pipefail: a failing git command fails the check
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git rev-list --objects "$BASE_SHA..HEAD" \
+            | git cat-file --batch-check='%(objecttype) %(objectsize) %(rest)' \
+            | awk -v limit=$((10 * 1024 * 1024)) '
+                $1 == "blob" && $2 > limit {
+                  path = $0; sub(/^[^ ]+ [^ ]+ /, "", path)
+                  printf "::error::%s is %.1f MB, over the 10 MB limit for files in git\n", path, $2 / 1048576
+                  found = 1
+                }
+                END { exit found }'
       - uses: actions/setup-node@v4
         with:
           node-version: 20
