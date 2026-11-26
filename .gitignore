@@ -145,3 +145,6 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# BirdBox / BirdNET V3.0 models, fetched at build time (scripts/fetch-models.mjs)
+_models/
