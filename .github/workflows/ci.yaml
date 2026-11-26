@@ -39,15 +39,24 @@ jobs:
                 END { exit found }'
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # 22: node --check recognizes the ES modules in public/js/birdbox/
+          node-version: 22
           cache: npm
       - run: npm ci
       - name: Check JavaScript syntax
         run: |
-          for f in public/js/*.js public/sw.js; do
+          for f in public/js/*.js public/js/birdbox/*.js public/sw.js scripts/*.mjs; do
             echo "node --check $f"
             node --check "$f"
           done
+      - uses: actions/cache@v4
+        with:
+          path: _models
+          key: birdbox-models-${{ hashFiles('scripts/fetch-models.mjs') }}
       - run: npm run build
+      # BirdBox's live stream against a whole-file run (needs the models the build fetched)
+      - run: npm test
       - name: Check build output
-        run: test -f _site/index.html && test -f _site/sw.js
+        run: |
+          test -f _site/index.html && test -f _site/sw.js
+          test -f _site/models/manifest.json && test -f _site/vendor/onnxruntime-web/ort.wasm.min.mjs

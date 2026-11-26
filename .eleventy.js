@@ -25,6 +25,16 @@ module.exports = function (eleventyConfig) {
     "node_modules/@tensorflow/tfjs/dist/tf.min.js": "js/tfjs-4.14.0.min.js",
   });
 
+  // Self-hosted ONNX Runtime Web (MIT), WASM backend only, for BirdBox
+  for (const file of ["ort.wasm.min.mjs", "ort-wasm-simd-threaded.mjs", "ort-wasm-simd-threaded.wasm"]) {
+    eleventyConfig.addPassthroughCopy({
+      [`node_modules/onnxruntime-web/dist/${file}`]: `vendor/onnxruntime-web/${file}`,
+    });
+  }
+
+  // BirdBox and BirdNET V3.0 models, fetched and verified by scripts/fetch-models.mjs (npm run fetch-models)
+  eleventyConfig.addPassthroughCopy({ "_models/dist": "models" });
+
   return {
     pathPrefix: "/real-time-pwa/",
     dir: { input: "src", includes: "_includes", output: "_site" },

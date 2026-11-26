@@ -24,6 +24,12 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # BirdBox and BirdNET V3.0 models are pinned and hash-checked in scripts/fetch-models.mjs
+      # (npm run build fetches them first); caching them keeps builds fast
+      - uses: actions/cache@v4
+        with:
+          path: _models
+          key: birdbox-models-${{ hashFiles('scripts/fetch-models.mjs') }}
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

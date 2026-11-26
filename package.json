@@ -3,9 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "fetch-models": "node scripts/fetch-models.mjs",
+    "prebuild": "npm run fetch-models",
     "build": "eleventy",
+    "preserve": "npm run fetch-models",
     "serve": "eleventy --serve --port=8080",
-    "watch": "eleventy --watch"
+    "prewatch": "npm run fetch-models",
+    "watch": "eleventy --watch",
+    "pretest": "npm run fetch-models",
+    "test": "node --test tests/*.test.mjs"
   },
   "devDependencies": {
     "@11ty/eleventy": "^3.1.0"
@@ -14,6 +20,7 @@
     "@tensorflow/tfjs": "^4.22.0",
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
-    "d3": "^7.9.0"
+    "d3": "^7.9.0",
+    "onnxruntime-web": "1.30.0"
   }
 }

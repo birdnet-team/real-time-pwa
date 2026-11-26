@@ -150,7 +150,8 @@ async function loadTranslations(lang) {
     currentUiLang = lang;
     store.set("bn_ui_lang", lang);
     updateUIText();
-    
+    updateBirdBoxDisplay(birdboxStatus); // its loading text has a number in it
+
     // Re-render dynamic lists to apply new translations
     renderDetections(latestDetections);
     if (document.getElementById("exploreList")) renderExploreList();
@@ -237,6 +238,7 @@ let sensitivity = store.getFloat("bn_sensitivity", 1.0); // New: Sensitivity
 let inferenceInterval = store.getFloat("bn_inference_interval", 500);
 let rumbleFilterFreq = store.getFloat("bn_rumble_freq", 200);
 let geoThreshold = store.getFloat("bn_geo_threshold", 0.05);
+let birdboxEnabled = store.getBool("bn_birdbox_enabled", false); // BirdBox boxes on the spectrogram (off by default)
 
 /* ==========================================================================
    5. DOM ACCESSORS
@@ -248,6 +250,9 @@ const recordLabelTextEl = () => document.querySelector(".record-label-text");
 const detectionsList    = () => document.getElementById("detectionsList");
 const geoStatusEl       = () => document.getElementById("geoStatusText");
 const geoCoordsEl       = () => document.getElementById("geoCoordsText");
+const geoMainEl         = () => document.getElementById("geoMainStatus");
+const birdboxMainEl     = () => document.getElementById("birdboxMainStatus");
+const birdboxStatusEl   = () => document.getElementById("birdboxStatusText");
 const settingsToggleEl  = () => document.getElementById("settingsToggle");
 const settingsDrawerEl  = () => document.getElementById("settingsDrawer");
 const settingsOverlayEl = () => document.getElementById("settingsOverlay");
@@ -278,6 +283,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (isLive) {
     setupRecordButton();
     initSpectrogramCanvas(); // Initialize canvas size immediately to prevent layout shift
+    initBirdBox();
   }
 
   // Handle Geolocation Initialization
@@ -376,12 +382,13 @@ function initWorker(langOverride) {
         break;
 
       case "area-scores":
-        // Geo priors updated, refresh explore list if visible
-        if (document.getElementById("exploreList")) requestSpeciesList();
+        // Geo priors updated, refresh explore list if visible (and BirdBox's location filter)
+        if (document.getElementById("exploreList") || birdboxEnabled) requestSpeciesList();
         break;
 
       case "species_list":
         renderExploreList(data.list);
+        updateBirdBoxGeo();
         break;
     }
   };
@@ -479,6 +486,7 @@ function stopListening() {
   // Reset State
   lastInferenceStart = 0;
   lastInferenceMs = null;
+  birdBox()?.stop();
 
   // Cleanup Audio
   if (currentStream) {
@@ -554,12 +562,16 @@ async function setupAudioGraphFromStream(stream) {
         circularBuffer[circularWriteIndex] = input[i];
         circularWriteIndex = (circularWriteIndex + 1) % circularBuffer.length;
       }
+      if (birdboxEnabled) birdBox()?.push(input);
     };
 
     // Connect Gain -> Worklet -> Destination
     // gainNode.connect(workletNode); // OLD
     highPassFilterNode.connect(workletNode);
     workletNode.connect(audioContext.destination);
+
+    // BirdBox gets the same audio as BirdNET (after gain and rumble filter)
+    if (birdboxEnabled) birdBox()?.start(audioContext.sampleRate);
 
   } catch (err) {
     console.error("Failed to load AudioWorklet", err);
@@ -871,7 +883,8 @@ function initUIControls() {
           geoWatchId = null;
         }
         updateGeoDisplay("status_geo_disabled", null);
-        
+        updateBirdBoxGeo();
+
         // Handle Explore page state change
         if (document.getElementById("exploreList")) {
            const container = document.getElementById("exploreList");
@@ -989,6 +1002,7 @@ function initUIControls() {
       store.set("bn_lang", currentLabelLang);
       latestDetections = [];
       renderDetections([]);
+      birdBox()?.setLabelLang(currentLabelLang);
       
       if (birdnetWorker && workerReady) {
         updateStatus("status_reloading_model");
@@ -1093,7 +1107,6 @@ function renderDetections(pooled) {
       <div class="col-12 text-center text-muted py-5">
         <i class="bi bi-soundwave fs-1 d-block mb-3 opacity-25"></i>
         <p>${t("msg_no_detections", Math.round(detectionThreshold * 100))}</p>
-        ${useGeoFilter ? `<small>${t("msg_geo_active")}</small>` : ""}
       </div>
     `;
     return;
@@ -1252,12 +1265,27 @@ function renderExploreList(list) {
    11. GEOLOCATION
    ========================================================================== */
 
+// Main page line for each geolocation state
+const GEO_MAIN_KEYS = {
+  status_geo_acquired: "main_geo_active",
+  status_geo_disabled: "main_geo_off",
+  status_geo_requesting: "main_geo_waiting",
+  status_geo_waiting: "main_geo_waiting",
+  status_geo_failed: "main_geo_failed",
+  status_geo_unsupported: "main_geo_failed",
+};
+
 function updateGeoDisplay(key, coords) {
   const status = geoStatusEl();
   const coordsEl = geoCoordsEl();
   if (status) {
     status.textContent = t(key);
     status.setAttribute("data-i18n", key);
+  }
+  const main = geoMainEl();
+  if (main && GEO_MAIN_KEYS[key]) {
+    main.textContent = t(GEO_MAIN_KEYS[key]);
+    main.setAttribute("data-i18n", GEO_MAIN_KEYS[key]);
   }
   if (coordsEl) {
     coordsEl.textContent = coords
@@ -1294,6 +1322,7 @@ function getGeolocation() {
       geolocation = null;
       updateGeoDisplay("status_geo_failed", null);
       renderDetections();
+      updateBirdBoxGeo();
     },
     {
       enableHighAccuracy: true,
@@ -1325,7 +1354,130 @@ function sendAreaScores() {
 }
 
 /* ==========================================================================
-   12. SYSTEM UTILITIES
+   12. BIRDBOX (optional boxes on the spectrogram)
+   The detection runs in js/birdbox/ (ES modules, loaded on the Live page
+   only), which sets window.BirdBoxLive; this section connects it to the page.
+   ========================================================================== */
+
+let birdboxConnected = false;
+let birdboxStatus = { state: "off" };
+
+const birdBox = () => (birdboxConnected ? window.BirdBoxLive : null);
+
+function initBirdBox() {
+  const toggle = document.getElementById("birdboxToggle");
+  if (toggle) {
+    toggle.checked = birdboxEnabled;
+    toggle.addEventListener("change", () => setBirdBoxEnabled(toggle.checked));
+  }
+  updateBirdBoxDisplay(birdboxStatus);
+
+  const connect = () => {
+    const bb = window.BirdBoxLive;
+    if (!bb || birdboxConnected) return;
+    birdboxConnected = true;
+    bb.init({
+      parent: spectroCanvas ? spectroCanvas.parentElement : null,
+      view: spectrogramView,
+      onStatus: updateBirdBoxDisplay,
+    });
+    bb.setLabelLang(currentLabelLang);
+    updateBirdBoxGeo();
+    if (birdboxEnabled) {
+      bb.enable();
+      if (isListening && audioContext) bb.start(audioContext.sampleRate);
+    }
+  };
+  if (window.BirdBoxLive) connect();
+  else {
+    window.addEventListener("birdboxlive-ready", connect, { once: true });
+    // The module did not load (offline before it was ever cached, or an old browser)
+    window.addEventListener("load", () => {
+      if (!birdboxConnected && birdboxEnabled) updateBirdBoxDisplay({ state: "error", message: "" });
+    }, { once: true });
+  }
+}
+
+function setBirdBoxEnabled(on) {
+  birdboxEnabled = on;
+  store.set("bn_birdbox_enabled", on);
+  const bb = birdBox();
+  if (!bb) {
+    updateBirdBoxDisplay(on ? { state: "error", message: "" } : { state: "off" });
+    return;
+  }
+  if (on) {
+    bb.enable();
+    updateBirdBoxGeo();
+    requestSpeciesList();
+    if (isListening && audioContext) bb.start(audioContext.sampleRate);
+  } else {
+    bb.disable();
+  }
+}
+
+/** The live spectrogram as BirdBox draws on it: its right edge is now. */
+function spectrogramView() {
+  if (!spectroCanvas) return null;
+  const width = spectroCanvas.clientWidth || spectroCanvas.width;
+  const height = spectroCanvas.clientHeight || spectroCanvas.height;
+  return {
+    width,
+    height,
+    secondsPerPx: spectroColumnSeconds || spectroDurationSec / Math.max(1, width),
+    minFreq: spectroMinFreq,
+    maxFreq: spectroMaxFreq,
+    labelLeft: 42, // the frequency axis (drawSpectrogramAxis) takes the left 40 px
+  };
+}
+
+/** BirdBox suggests only species the location model expects here, while the geo filter is on. */
+function updateBirdBoxGeo() {
+  const bb = birdBox();
+  if (!bb) return;
+  if (!geoEnabled || !geolocation || !lastSpeciesList) {
+    bb.setGeo(null);
+    return;
+  }
+  bb.setGeo(new Map(lastSpeciesList
+    .filter(b => typeof b.geoscore === "number")
+    .map(b => [b.scientificName, b.geoscore])));
+}
+
+/** BirdBox's state on the main page and in the settings. */
+function updateBirdBoxDisplay(status) {
+  birdboxStatus = status || { state: "off" };
+  let key, text;
+  switch (birdboxStatus.state) {
+    case "loading":
+      key = "main_birdbox_loading";
+      text = t(key, birdboxStatus.pct ?? 0);
+      break;
+    case "ready":
+    case "active":
+      key = "main_birdbox_active";
+      break;
+    case "error":
+      key = "main_birdbox_error";
+      if (birdboxStatus.message) console.warn("BirdBox:", birdboxStatus.message);
+      break;
+    default:
+      key = "main_birdbox_off";
+  }
+  for (const el of [birdboxMainEl(), birdboxStatusEl()]) {
+    if (!el) continue;
+    if (text !== undefined) {
+      el.textContent = text;
+      el.removeAttribute("data-i18n");
+    } else {
+      el.textContent = t(key) || el.textContent;
+      el.setAttribute("data-i18n", key);
+    }
+  }
+}
+
+/* ==========================================================================
+   13. SYSTEM UTILITIES
    ========================================================================== */
 
 // Wake Lock (Keep screen on while recording)

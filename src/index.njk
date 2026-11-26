@@ -12,10 +12,17 @@ permalink: "/"
 
 <div class="container py-4">
   <!-- Header / Status Row -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div class="d-flex align-items-center gap-2">
-      <div id="listeningIndicator" class="spinner-grow text-danger spinner-grow-sm d-none" role="status"></div>
-      <span class="small text-muted" id="statusText" data-i18n="status_init">Tap 'Start' to record</span>
+  <div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+      <div class="d-flex align-items-center gap-2">
+        <div id="listeningIndicator" class="spinner-grow text-danger spinner-grow-sm d-none" role="status"></div>
+        <span class="small text-muted" id="statusText" data-i18n="status_init">Tap 'Start' to record</span>
+      </div>
+      <!-- Always visible: which optional features are on -->
+      <div class="feature-status small text-muted mt-1" aria-live="polite">
+        <div><i class="bi bi-geo-alt me-1" aria-hidden="true"></i><span id="geoMainStatus" data-i18n="main_geo_waiting">Geo filter: waiting for location</span></div>
+        <div><i class="bi bi-bounding-box me-1" aria-hidden="true"></i><span id="birdboxMainStatus" data-i18n="main_birdbox_off">BirdBox not active</span></div>
+      </div>
     </div>
     <button
       id="settingsToggle"
@@ -61,6 +68,15 @@ permalink: "/"
         <span data-i18n="lbl_coordinates">Coordinates</span>: <span class="fw-semibold" id="geoCoordsText">—</span>
       </div>
       <div class="form-text small mt-2" data-i18n="msg_geo_hint">Filters species based on your current location.</div>
+    </div>
+
+    <div class="mb-3 p-3 bg-light rounded-3">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="birdboxToggle">
+        <label class="form-check-label fw-semibold" for="birdboxToggle" data-i18n="lbl_use_birdbox">Use BirdBox</label>
+      </div>
+      <div class="geo-status mt-1" id="birdboxStatusText" data-i18n="main_birdbox_off">BirdBox not active</div>
+      <div class="form-text small mt-2" data-i18n="msg_birdbox_hint">Draws boxes around bird sounds on the spectrogram and names them with BirdNET V3.0. Downloads about 100 MB once and needs a fast device.</div>
     </div>
 
     <div class="row g-3">
@@ -235,3 +251,5 @@ permalink: "/"
     <span class="record-label-text">Start</span>
   </span>
 </button>
+
+<script type="module" src="{{ '/js/birdbox/birdbox-live.js' | url }}"></script>

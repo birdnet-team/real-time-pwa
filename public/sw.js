@@ -8,16 +8,21 @@
    1. CONFIGURATION & VERSIONING
    ========================================================================== */
 
-const APP_VERSION = "v0.2.2";   // Increment on app code changes
+const APP_VERSION = "v0.3.0";   // Increment on app code changes
 const MODEL_VERSION = "v2.4";    // Increment only when model files change
+const ORT_VERSION = "1.30.0";    // onnxruntime-web, for BirdBox (package.json)
 
 const APP_CACHE_NAME = `birdnet-app-${APP_VERSION}`;
 const MODEL_CACHE_NAME = `birdnet-model-${MODEL_VERSION}`;
 const IMAGE_CACHE_NAME = "birdnet-images-v2";
+// ONNX Runtime Web: only fetched once BirdBox is switched on, then kept
+const ORT_CACHE_NAME = `birdnet-ort-${ORT_VERSION}`;
+// BirdBox and BirdNET V3.0 models: js/birdbox/model-store.js fetches, checks and keeps them itself
+const BIRDBOX_MODEL_CACHE_NAME = "birdnet-live-birdbox-models-v1";
 // Name prefixes of every cache this app has created, current and earlier versions.
 // Other apps on the same origin (birdnet-team.github.io) share the cache storage,
 // so cleanup and purge must only ever touch these.
-const OWN_CACHE_PREFIXES = ["birdnet-app-", "birdnet-model-", "birdnet-images-", "birdnet-rt-"];
+const OWN_CACHE_PREFIXES = ["birdnet-app-", "birdnet-model-", "birdnet-images-", "birdnet-rt-", "birdnet-ort-", "birdnet-live-birdbox-models-"];
 
 const ENABLE_CACHING = true;
 const FORCE_CLEAR_ON_ACTIVATE = false;
@@ -48,6 +53,19 @@ const CORE_URLS = [
   "js/app.js",
   "js/birdnet-worker.js",
   "js/tfjs-4.14.0.min.js",
+  "js/birdbox/birdbox-fusion.js",
+  "js/birdbox/birdbox-live.js",
+  "js/birdbox/birdbox-service.js",
+  "js/birdbox/birdbox-stream.js",
+  "js/birdbox/birdbox-worker.js",
+  "js/birdbox/config.js",
+  "js/birdbox/model-store.js",
+  "js/birdbox/ort-pool.js",
+  "js/birdbox/ort-worker.js",
+  "js/birdbox/region-cut.js",
+  "js/birdbox/resample.js",
+  "js/birdbox/species.js",
+  "js/birdbox/v3-service.js",
   "locales/en.json",
   "locales/de.json",
   "locales/fr.json",
@@ -121,7 +139,7 @@ self.addEventListener("activate", (event) => {
       await purgeAllCaches();
     } else {
       // Cleanup old caches
-      const keep = new Set([APP_CACHE_NAME, MODEL_CACHE_NAME, IMAGE_CACHE_NAME]);
+      const keep = new Set([APP_CACHE_NAME, MODEL_CACHE_NAME, IMAGE_CACHE_NAME, ORT_CACHE_NAME, BIRDBOX_MODEL_CACHE_NAME]);
       const keys = await ownCacheKeys();
       await Promise.all(keys.filter(k => !keep.has(k)).map(k => caches.delete(k)));
     }
@@ -168,7 +186,13 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // D. Navigation/Others -> Network First with Fallback
+  // D. ONNX Runtime Web (BirdBox) -> Cache First, cached on first use
+  if (rel.startsWith("vendor/onnxruntime-web/")) {
+    event.respondWith(handleCacheFirst(request, ORT_CACHE_NAME, rel));
+    return;
+  }
+
+  // E. Navigation/Others -> Network First with Fallback
   event.respondWith(handleNetworkFirst(request));
 });
 
@@ -229,8 +253,9 @@ async function handleNetworkFirst(request) {
   try {
     return await fetch(request);
   } catch {
+    // Fallback to root for navigation only: a script or data file must fail, not get the page
+    if (request.mode !== "navigate") return Response.error();
     const cache = await caches.open(APP_CACHE_NAME);
-    // Fallback to root for navigation
     const fallback = await cache.match("./");
     return fallback || Response.error();
   }
