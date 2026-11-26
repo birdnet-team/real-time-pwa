@@ -94,9 +94,10 @@ self.addEventListener("install", (event) => {
   if (!ENABLE_CACHING) return;
 
   event.waitUntil((async () => {
-    // 1. Cache App Core
+    // 1. Cache App Core: from the server, not the browser's HTTP cache, which may
+    //    still hold files of the previous version (GitHub Pages lets it keep them 10 minutes)
     const appCache = await caches.open(APP_CACHE_NAME);
-    await appCache.addAll(CORE_URLS);
+    await appCache.addAll(CORE_URLS.map(url => new Request(url, { cache: "reload" })));
     
     // 2. Cache Model (separately to avoid re-downloading on app updates)
     const modelCache = await caches.open(MODEL_CACHE_NAME);
