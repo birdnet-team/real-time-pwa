@@ -14,6 +14,10 @@ const MODEL_VERSION = "v2.4";    // Increment only when model files change
 const APP_CACHE_NAME = `birdnet-app-${APP_VERSION}`;
 const MODEL_CACHE_NAME = `birdnet-model-${MODEL_VERSION}`;
 const IMAGE_CACHE_NAME = "birdnet-images-v2";
+// Name prefixes of every cache this app has created, current and earlier versions.
+// Other apps on the same origin (birdnet-team.github.io) share the cache storage,
+// so cleanup and purge must only ever touch these.
+const OWN_CACHE_PREFIXES = ["birdnet-app-", "birdnet-model-", "birdnet-images-", "birdnet-rt-"];
 
 const ENABLE_CACHING = true;
 const FORCE_CLEAR_ON_ACTIVATE = false;
@@ -117,7 +121,7 @@ self.addEventListener("activate", (event) => {
     } else {
       // Cleanup old caches
       const keep = new Set([APP_CACHE_NAME, MODEL_CACHE_NAME, IMAGE_CACHE_NAME]);
-      const keys = await caches.keys();
+      const keys = await ownCacheKeys();
       await Promise.all(keys.filter(k => !keep.has(k)).map(k => caches.delete(k)));
     }
     clients.claim(); // Take control of clients immediately
@@ -224,8 +228,13 @@ async function handleNetworkFirst(request) {
    6. UTILITIES
    ========================================================================== */
 
-async function purgeAllCaches() {
+async function ownCacheKeys() {
   const keys = await caches.keys();
+  return keys.filter(k => OWN_CACHE_PREFIXES.some(prefix => k.startsWith(prefix)));
+}
+
+async function purgeAllCaches() {
+  const keys = await ownCacheKeys();
   await Promise.all(keys.map(k => caches.delete(k)));
   console.log("[SW] Caches purged.");
 }
