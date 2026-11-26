@@ -13,6 +13,13 @@ const SAMPLE_RATE = 48000;
 const WINDOW_SECONDS = 3;
 const WINDOW_SAMPLES = SAMPLE_RATE * WINDOW_SECONDS;
 
+// Species images (BirdNET Species Metadata API, same source as birdnet-live-app)
+const SPECIES_IMAGE_BASE = "https://birdnet.cornell.edu/taxonomy/api/image/";
+const speciesImageUrl = (scientificName) =>
+  `${SPECIES_IMAGE_BASE}${encodeURIComponent(scientificName)}?size=medium`;
+// Absolute path, so the placeholder also resolves on sub-pages like /explore/
+const PLACEHOLDER_IMAGE_URL = (window.PATH_PREFIX || "/") + "img/dummy.webp";
+
 // Inference settings
 const TEMPORAL_POOL_WINDOW = 5;    // Number of recent predictions to pool
 const USE_TEMPORAL_POOL = true;    // Enable log-mean-exp pooling
@@ -1114,7 +1121,7 @@ function renderDetections(pooled) {
     const commonName = p.commonNameI18n || p.commonName || `Class ${p.index}`;
     const scientificName = p.scientificName || "";
     const key = scientificName || `idx-${p.index}`;
-    const imgUrl = `https://birdnet.cornell.edu/api2/bird/${encodeURIComponent(scientificName)}.webp`;
+    const imgUrl = speciesImageUrl(scientificName);
 
     newKeys.add(key);
     let cardCol = existingCards.get(key);
@@ -1143,7 +1150,7 @@ function renderDetections(pooled) {
                    alt="${commonName}"
                    loading="lazy"
                    style="width: 100%; height: 100%; object-fit: cover;"
-                   onerror="this.onerror=null; this.src='img/dummy.webp';">
+                   onerror="this.onerror=null; this.src='${PLACEHOLDER_IMAGE_URL}';">
             </div>
             <div class="card-body py-2 px-3 flex-grow-1">
               <div class="d-flex justify-content-between align-items-start mb-1">
@@ -1204,7 +1211,7 @@ function renderExploreList(list) {
   sorted.forEach(bird => {
     const scorePct = (bird.geoscore * 100).toFixed(1);
     const common = bird.commonNameI18n || bird.commonName;
-    const imgUrl = `https://birdnet.cornell.edu/api2/bird/${encodeURIComponent(bird.scientificName)}.webp`;
+    const imgUrl = speciesImageUrl(bird.scientificName);
     
     const col = document.createElement("div");
     col.className = "col-md-6 col-lg-4";
@@ -1216,7 +1223,7 @@ function renderExploreList(list) {
                  alt="${common}"
                  loading="lazy"
                  style="width: 100%; height: 100%; object-fit: cover;"
-                 onerror="this.onerror=null; this.src='img/dummy.webp';">
+                 onerror="this.onerror=null; this.src='${PLACEHOLDER_IMAGE_URL}';">
           </div>
           <div class="card-body py-2 px-3 flex-grow-1">
             <div class="d-flex justify-content-between align-items-start mb-1">
