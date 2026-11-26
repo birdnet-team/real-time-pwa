@@ -1,0 +1,33 @@
+name: CI
+
+# Checks pull requests before they are merged. This workflow only builds and
+# checks; deployment stays in eleventy_deploy.yaml (push to main).
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Check JavaScript syntax
+        run: |
+          for f in public/js/*.js public/sw.js; do
+            echo "node --check $f"
+            node --check "$f"
+          done
+      - run: npm run build
+      - name: Check build output
+        run: test -f _site/index.html && test -f _site/sw.js
