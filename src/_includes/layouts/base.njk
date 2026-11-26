@@ -30,6 +30,17 @@
   <script src="{{ '/js/app.js' | url }}"></script>
   <script>
     if ('serviceWorker' in navigator) {
+      // An update installs a new service worker, which takes over at once (sw.js). Until
+      // then the old one served this visit, possibly the new page with the old scripts
+      // from its cache. Reload once, so everything comes from the same version; not
+      // while recording, and not when the first service worker is installed.
+      const hadController = !!navigator.serviceWorker.controller;
+      let reloading = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadController || reloading || document.querySelector('#recordButton.recording')) return;
+        reloading = true;
+        location.reload();
+      });
       window.addEventListener('load', () => {
         navigator.serviceWorker.register("{{ '/sw.js' | url }}").catch(console.error);
       });
