@@ -8,7 +8,7 @@
    1. CONFIGURATION & VERSIONING
    ========================================================================== */
 
-const APP_VERSION = "v0.2.1";   // Increment on app code changes
+const APP_VERSION = "v0.2.2";   // Increment on app code changes
 const MODEL_VERSION = "v2.4";    // Increment only when model files change
 
 const APP_CACHE_NAME = `birdnet-app-${APP_VERSION}`;
@@ -210,7 +210,18 @@ async function handleStaleWhileRevalidate(request, cacheName, relPath) {
     return networkResponse;
   }).catch(() => { /* ignore network errors if cached */ });
 
-  return cached || fetchPromise;
+  return cached ? asRequested(cached) : fetchPromise;
+}
+
+/**
+ * A cached response as the answer to this request. A response straight from the cache
+ * carries the URL it was stored under, without the request's query string, and a worker
+ * started from it sees that URL as its location: birdnet-worker.js then loses its
+ * parameters (?tf=…&root=…&lang=…). A new Response has no URL, so the browser gives it
+ * the request's.
+ */
+function asRequested(response) {
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers: response.headers });
 }
 
 async function handleNetworkFirst(request) {
