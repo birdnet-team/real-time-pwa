@@ -151,6 +151,7 @@ async function loadTranslations(lang) {
     store.set("bn_ui_lang", lang);
     updateUIText();
     updateBirdBoxDisplay(birdboxStatus); // its loading text has a number in it
+    updateBirdBoxSettings();
 
     // Re-render dynamic lists to apply new translations
     renderDetections(latestDetections);
@@ -239,6 +240,8 @@ let inferenceInterval = store.getFloat("bn_inference_interval", 500);
 let rumbleFilterFreq = store.getFloat("bn_rumble_freq", 200);
 let geoThreshold = store.getFloat("bn_geo_threshold", 0.05);
 let birdboxEnabled = store.getBool("bn_birdbox_enabled", false);
+let birdboxConf = store.getFloat("bn_birdbox_conf", 0.15);  // BirdBox box confidence
+let birdboxGap = store.getFloat("bn_birdbox_gap", 0.05);    // BirdBox phrase gap, seconds
 let birdboxSure = store.getFloat("bn_birdbox_sure", 0.7);   // BirdBox species confidence // BirdBox boxes on the spectrogram (off by default)
 
 /* ==========================================================================
@@ -922,6 +925,18 @@ function initUIControls() {
     spectroGain = v;
   }, (v) => `${v.toFixed(1)}×`, "bn_spec_gain");
 
+  bindRange("birdboxConfRange", birdboxConf * 100, (v) => {
+    birdboxConf = v / 100;
+    store.set("bn_birdbox_conf", birdboxConf);
+    birdBox()?.setBoxes(birdboxConf, birdboxGap);
+  }, (v) => `${Math.round(v)}%`);
+
+  bindRange("birdboxGapRange", birdboxGap, (v) => {
+    birdboxGap = v;
+    store.set("bn_birdbox_gap", birdboxGap);
+    birdBox()?.setBoxes(birdboxConf, birdboxGap);
+  }, formatPhraseGap);
+
   bindRange("birdboxSureRange", birdboxSure * 100, (v) => {
     birdboxSure = v / 100;
     store.set("bn_birdbox_sure", birdboxSure);
@@ -1378,6 +1393,17 @@ function initBirdBox() {
     toggle.addEventListener("change", () => setBirdBoxEnabled(toggle.checked));
   }
   updateBirdBoxDisplay(birdboxStatus);
+  updateBirdBoxSettings();
+  // Links within the settings: to the BirdBox section, and back to its switch
+  document.querySelectorAll(".settings-jump[data-jump]").forEach(link => {
+    link.addEventListener("click", (e) => {
+      const target = document.getElementById(link.dataset.jump);
+      if (!target) return;
+      e.preventDefault();
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (target.matches("input")) target.focus({ preventScroll: true });
+    });
+  });
 
   const connect = () => {
     const bb = window.BirdBoxLive;
@@ -1389,6 +1415,7 @@ function initBirdBox() {
       onStatus: updateBirdBoxDisplay,
     });
     bb.setLabelLang(currentLabelLang);
+    bb.setBoxes(birdboxConf, birdboxGap);
     bb.setSure(birdboxSure);
     updateBirdBoxGeo();
     if (birdboxEnabled) {
@@ -1409,6 +1436,7 @@ function initBirdBox() {
 function setBirdBoxEnabled(on) {
   birdboxEnabled = on;
   store.set("bn_birdbox_enabled", on);
+  updateBirdBoxSettings();
   const bb = birdBox();
   if (!bb) {
     updateBirdBoxDisplay(on ? { state: "error", message: "" } : { state: "off" });
@@ -1422,6 +1450,21 @@ function setBirdBoxEnabled(on) {
   } else {
     bb.disable();
   }
+}
+
+/** BirdBox's section in the settings: greyed out, with a note, while BirdBox is off. */
+function updateBirdBoxSettings() {
+  const fields = document.getElementById("birdboxSettingsFields");
+  const note = document.getElementById("birdboxOffNote");
+  if (fields) fields.disabled = !birdboxEnabled;
+  if (note) note.hidden = birdboxEnabled;
+  // The phrase gap's value has a word in it at 0 ("off"), in the app's language
+  const gap = document.getElementById("birdboxGapValue");
+  if (gap) gap.textContent = formatPhraseGap(birdboxGap);
+}
+
+function formatPhraseGap(v) {
+  return v > 0 ? `${v.toFixed(2)} s` : (t("lbl_birdbox_gap_off") || "off");
 }
 
 /** The live spectrogram as BirdBox draws on it: its right edge is now. */

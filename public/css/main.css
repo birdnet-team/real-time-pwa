@@ -169,6 +169,14 @@ main { padding-bottom: 4.5rem; }
   box-shadow: -16px 0 40px rgba(15,23,42,0.2);
 }
 .settings-drawer-header { margin-bottom: 1.25rem; }
+/* Links within the settings to another place in them */
+.settings-jump { text-decoration: none; white-space: nowrap; }
+.settings-jump:hover, .settings-jump:focus-visible { text-decoration: underline; }
+/* BirdBox section: greyed out while BirdBox is off, with a note saying so */
+.birdbox-settings { transition: opacity 0.2s; }   /* a fieldset: Bootstrap resets its border and padding */
+.birdbox-settings:disabled { opacity: 0.45; }
+.birdbox-off-note { color: #6c757d; background: #f8f9fa; border-radius: 0.5rem; padding: 0.5rem 0.75rem; }
+.birdbox-off-note[hidden] { display: none; }
 .settings-drawer-body {
   display: flex;
   flex-direction: column;

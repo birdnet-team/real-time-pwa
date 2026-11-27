@@ -9,7 +9,8 @@
  *   BirdBox (Just-Bird) runs on it as a stream (birdbox-stream.js): each 3 s window
  *   is detected once, as soon as the audio reaches its end, and its boxes are final.
  * - The windows' boxes are fused as BirdBox's graph does (birdbox-fusion.js), at the
- *   website's default settings: confidence 0.15, phrase gap 0.05 s.
+ *   confidence and phrase gap of the app's settings (by default the website's: 0.15
+ *   and 0.05 s).
  * - BirdNET V3.0 scores every box on its own audio: its time span (at least 1 s),
  *   with everything outside its frequency band, and the parts that smaller boxes
  *   inside it cover, replaced by background noise (region-cut.js). Only birds count.
@@ -27,15 +28,15 @@
  * The page (app.js, a classic script) uses it through window.BirdBoxLive.
  */
 import { StreamConverter } from './resample.js';
-import { birdbox } from './birdbox-service.js';
+import { birdbox, RAW_CONF } from './birdbox-service.js';
 import { analyzedTo as analyzedAfter, readyWindows } from './birdbox-stream.js';
 import { fuseBoxes } from './birdbox-fusion.js';
 import { boxCrops, SR, v3 } from './v3-service.js';
 import { catalog } from './species.js';
 import { getManifest } from './model-store.js';
 
-const CONF = 0.15;            // BirdBox's confidence: the website's default
-const PHRASE_GAP = 0.05;      // seconds: BirdBox's phrase gap, the website's default
+const CONF = 0.15;            // BirdBox's confidence until the app sets it (setBoxes): the website's default
+const PHRASE_GAP = 0.05;      // seconds: BirdBox's phrase gap until the app sets it, the website's default
 const SPECIES_CONF = 0.7;     // species confidence until the app sets it (setSure): the website's default
 const SPECIES_LOW = 0.5;      // a species surely in the recording names a box from this share of the species confidence
 const MIN_SCORE = 0.05;       // BirdNET V3.0 scores below this are not kept
@@ -85,6 +86,8 @@ class BirdBoxLive {
     this.colors = new Map();  // species -> its color on the spectrogram
     this.geo = null;          // scientific name -> location score, or null when the filter is off
     this.labelLang = 'en_us';
+    this.conf = CONF;         // BirdBox's confidence and phrase gap (setBoxes)
+    this.gap = PHRASE_GAP;
     this.sureLevel = SPECIES_CONF;   // species confidence: a species this sure in some box names boxes (setSure)
     this.status = { state: 'off' };
     this.preloading = null;
@@ -312,14 +315,15 @@ class BirdBoxLive {
 
   /* ---------------- boxes ---------------- */
 
-  _update(s) {
+  /** quiet: the settings changed, not the audio; boxes that differ from the old ones do not pop in. */
+  _update(s, quiet = false) {
     const off = s.streamStart / SR, before = s.songs, now = performance.now();
     // Rows still to come start with the next window: the boxes before them are fused once
-    s.songs = fuseBoxes(s.data, s.rows, CONF, PHRASE_GAP, s.fusion, s.next * HOP)
+    s.songs = fuseBoxes(s.data, s.rows, this.conf, this.gap, s.fusion, s.next * HOP)
       .map(b => ({ ...b, t0: b.t0 + off, t1: b.t1 + off }));
     for (const b of s.songs) {
       b.id = boxKey(b);
-      if (!before.some(o => o.t0 < b.t1 && b.t0 < o.t1 && o.flo < b.fhi && b.flo < o.fhi)) s.born.set(b.id, now);
+      if (!quiet && !before.some(o => o.t0 < b.t1 && b.t0 < o.t1 && o.flo < b.fhi && b.flo < o.fhi)) s.born.set(b.id, now);
     }
     if (s.born.size > 500) for (const [id, t] of s.born) if (now - t > POP_MS) s.born.delete(id);
     s.analyzedTo = off + analyzedAfter(s.next);
@@ -336,13 +340,13 @@ class BirdBoxLive {
   _markPending(s) {
     s.pending = new Set();
     if (s.analyzedTo == null || !s.open) return;
-    const after = s.analyzedTo - SETTLED - PHRASE_GAP, todo = [];
+    const after = s.analyzedTo - SETTLED - this.gap, todo = [];
     for (const b of s.songs) if (b.t1 > after) { s.pending.add(b); todo.push(b); }
     while (todo.length) {
       const p = todo.pop();
       for (const b of s.songs) {
         if (s.pending.has(b) || b.cls !== p.cls) continue;
-        if (Math.max(b.t0, p.t0) - Math.min(b.t1, p.t1) > PHRASE_GAP || b.fhi <= p.flo || p.fhi <= b.flo) continue;
+        if (Math.max(b.t0, p.t0) - Math.min(b.t1, p.t1) > this.gap || b.fhi <= p.flo || p.fhi <= b.flo) continue;
         s.pending.add(b);
         todo.push(b);
       }
@@ -507,6 +511,21 @@ class BirdBoxLive {
     if (!s) return;
     s.candidates.clear();
     this._findSure(s);
+  }
+
+  /**
+   * BirdBox's confidence and phrase gap, the website's sliders of those names (the
+   * app's Box Confidence Threshold and Phrase Gap). The windows' boxes are kept from
+   * RAW_CONF, so the boxes on the spectrogram are fused anew at once.
+   */
+  setBoxes(conf, gap) {
+    if (!(conf >= RAW_CONF && conf < 1) || !(gap >= 0 && gap <= 5) || (conf === this.conf && gap === this.gap)) return;
+    this.conf = conf;
+    this.gap = gap;
+    const s = this.session;
+    if (!s || !s.rows) return;
+    s.fusion = {};   // fused with the old values: anew
+    this._update(s, true);
   }
 
   /**

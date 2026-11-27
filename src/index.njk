@@ -77,14 +77,7 @@ permalink: "/"
       </div>
       <div class="geo-status mt-1" id="birdboxStatusText" data-i18n="main_birdbox_off">BirdBox not active</div>
       <div class="form-text small mt-2" data-i18n="msg_birdbox_hint">Draws boxes around bird sounds on the spectrogram and names them with BirdNET V3.0. Downloads about 100 MB once and needs a fast device.</div>
-      <div class="mt-3">
-        <div class="d-flex justify-content-between">
-          <label for="birdboxSureRange" class="form-label" data-i18n="lbl_birdbox_sure">BirdBox Species Threshold</label>
-          <span class="small text-muted">≥ <span class="form-range-value" id="birdboxSureValue">70%</span></span>
-        </div>
-        <input type="range" class="form-range" id="birdboxSureRange" min="30" max="95" step="5">
-        <div class="form-text small" data-i18n="msg_birdbox_sure_hint">A box gets a species once BirdNET V3.0 has been this sure of that species somewhere since listening started. Higher values name fewer boxes, with fewer mistakes.</div>
-      </div>
+      <a href="#birdboxSettings" class="settings-jump small d-inline-block mt-2" data-jump="birdboxSettings"><i class="bi bi-sliders me-1" aria-hidden="true"></i><span data-i18n="lnk_birdbox_settings">BirdBox settings</span><i class="bi bi-arrow-down-short" aria-hidden="true"></i></a>
     </div>
 
     <div class="row g-3">
@@ -243,6 +236,48 @@ permalink: "/"
       
       <div class="form-text small" data-i18n="msg_amp_range_hint">Visible loudness range. Adjust to increase contrast.</div>
     </div>
+
+    <hr class="my-4 opacity-25">
+
+    <!-- Section: BirdBox (its switch is under Detection & Model) -->
+    <h6 class="text-uppercase text-muted fw-bold mb-3" id="birdboxSettings" data-i18n="sec_birdbox">BirdBox</h6>
+
+    <div class="birdbox-off-note small mb-3" id="birdboxOffNote">
+      <i class="bi bi-info-circle me-1" aria-hidden="true"></i><span data-i18n="msg_birdbox_settings_off">BirdBox is deactivated.</span>
+      <a href="#birdboxToggle" class="settings-jump" data-jump="birdboxToggle"><span data-i18n="lnk_birdbox_enable">Activate it above</span><i class="bi bi-arrow-up-short" aria-hidden="true"></i></a>
+    </div>
+
+    <fieldset class="row g-3 birdbox-settings" id="birdboxSettingsFields">
+      <!-- Box confidence -->
+      <div class="col-12">
+        <div class="d-flex justify-content-between">
+          <label for="birdboxConfRange" class="form-label" data-i18n="lbl_birdbox_conf">Box Confidence Threshold</label>
+          <span class="small text-muted">≥ <span class="form-range-value" id="birdboxConfValue">15%</span></span>
+        </div>
+        <input type="range" class="form-range" id="birdboxConfRange" min="5" max="80" step="1">
+        <div class="form-text small" data-i18n="msg_birdbox_conf_hint">BirdBox draws a box around a sound from this confidence. Lower values also find quieter calls, but more noise too.</div>
+      </div>
+
+      <!-- Phrase gap -->
+      <div class="col-12">
+        <div class="d-flex justify-content-between">
+          <label for="birdboxGapRange" class="form-label" data-i18n="lbl_birdbox_gap">Phrase Gap</label>
+          <span class="small text-muted"><span class="form-range-value" id="birdboxGapValue">0.05 s</span></span>
+        </div>
+        <input type="range" class="form-range" id="birdboxGapRange" min="0" max="1" step="0.01">
+        <div class="form-text small" data-i18n="msg_birdbox_gap_hint">Calls in the same frequency band closer than this are joined into one phrase box. 0 keeps single calls.</div>
+      </div>
+
+      <!-- Species threshold -->
+      <div class="col-12">
+        <div class="d-flex justify-content-between">
+          <label for="birdboxSureRange" class="form-label" data-i18n="lbl_birdbox_sure">BirdBox Species Threshold</label>
+          <span class="small text-muted">≥ <span class="form-range-value" id="birdboxSureValue">70%</span></span>
+        </div>
+        <input type="range" class="form-range" id="birdboxSureRange" min="30" max="95" step="5">
+        <div class="form-text small" data-i18n="msg_birdbox_sure_hint">A box gets a species once BirdNET V3.0 has been this sure of that species somewhere since listening started. Higher values name fewer boxes, with fewer mistakes.</div>
+      </div>
+    </fieldset>
     
     <div class="d-grid mt-4">
       <button type="button" class="btn btn-secondary" id="settingsCloseBottom" data-i18n="btn_close">Close</button>
