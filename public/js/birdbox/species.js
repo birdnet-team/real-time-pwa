@@ -31,6 +31,9 @@ class Catalog {
         this.sci = table.species.map(s => s[0]);
         this.en = table.species.map(s => s[1]);
         this.cls = Uint8Array.from(table.species, s => s[2]);
+        // Score multipliers (BirdNET Live's score blacklist): labels known for false positives
+        this.factor = new Float32Array(this.count).fill(1);
+        for (const [i, f] of table.blacklist || []) this.factor[i] = f;
         this.names = this.en;
         return this;
       })();

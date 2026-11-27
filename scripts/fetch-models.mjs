@@ -4,8 +4,10 @@
  *
  * Ported from the BirdNET website (birdnet-team/birdnet-website, scripts/fetch-models.mjs
  * on the dev branch), reduced to what this app needs: the BirdBox Just-Bird model and
- * BirdNET+ V3.0, which names the boxes. The models are too large to keep in this
- * repository, so they are pulled from a pinned Zenodo record and a pinned BirdBox commit
+ * BirdNET+ V3.0, which names the boxes. BirdNET+ V3.0 is BirdNET Live's own build of it
+ * (BNL, birdnet-team/birdnet-live-app): the same audio model, labels, common names and
+ * score multipliers as the app. The models are too large to keep in this repository,
+ * so they are pulled from a pinned birdnet-live-app commit and a pinned BirdBox commit
  * at build time, verified by SHA-256, and written to _models/dist/ (gitignored).
  * Eleventy copies that folder to /models/ in the built site, next to the bundled
  * BirdNET V2.4 files. Downloads are cached in _models/upstream/, so repeated builds are
@@ -36,35 +38,40 @@ const UPSTREAM = join(OUT, 'upstream');
 const DIST = join(OUT, 'dist');
 const FORCE = process.argv.includes('--force');
 
-// Pinned upstream sources, the same as the BirdNET website (dev). Bump the record or
-// commit (and the expected hashes) to update.
-// BirdNET+ V3.0 model files (version 3.0.1 of the record)
-const ZENODO = { record: '24362980' };
+// Pinned upstream sources. Bump a commit (and the expected hashes) to update.
+// BirdNET Live: its main branch with the November 2026 models (BirdNET+ V3.0 BNL, taxonomy v0.5)
+const LIVE_APP = { repo: 'birdnet-team/birdnet-live-app', commit: 'c61c2ba5036d73f102cca9b54557184aee7dedab' };
+// BirdBox: the same commit as the BirdNET website (dev)
 const BIRDBOX = { repo: 'birdnet-team/BirdBox', commit: '24632a5560f6fd93959c2de157e94471be8ea0e7' };
 
-const zenodo = name => `https://zenodo.org/api/records/${ZENODO.record}/files/${encodeURIComponent(name)}/content`;
-const raw = (src, path) => `https://raw.githubusercontent.com/${src.repo}/${src.commit}/${path.split('/').map(encodeURIComponent).join('/')}`;
+const encodePath = path => path.split('/').map(encodeURIComponent).join('/');
+const raw = (src, path) => `https://raw.githubusercontent.com/${src.repo}/${src.commit}/${encodePath(path)}`;
+// A file stored with Git LFS: raw.githubusercontent.com would give its pointer, not the file
+const lfs = (src, path) => `https://media.githubusercontent.com/media/${src.repo}/${src.commit}/${encodePath(path)}`;
 
-// The pruned FP16 audio model uses one of the model's three classifier heads: 69 MB instead of 166 MB
-const V3_MODEL = 'BirdNET+_V3.0_Global_12K_FP16_pruned.onnx';
-const V3_LABELS = 'BirdNET+_V3.0_Global_12K_Labels.csv';
+// The audio model as BirdNET Live ships it: pruned to the 10,048 species its geo-model
+// knows (plus 16 sound classes), rewritten for on-device speed
+const V3_MODEL = 'BirdNET+_V3.0_Global_10K_FP16_BNL.onnx';
+const V3_LABELS = 'BirdNET+_V3.0_Global_10K_FP16_BNL_Labels.csv';
+const V3_BLACKLIST = 'BirdNET+_V3.0_Global_10K_FP16_BNL_ScoreBlacklist.json';
+const TAXONOMY = 'taxonomy.csv';   // BirdNET Live's taxonomy: the common names in other languages
 const BIRDBOX_MODEL = 'Just-Bird_fp16.onnx';
 
 const FILES = {
-  v3Model: { url: zenodo(V3_MODEL), name: V3_MODEL, sha256: 'feadeccc84feb021aeb9c51ec5288f6f5bd7065fe3773e2d48a69ea8a26b412a' },
-  v3Labels: { url: zenodo(V3_LABELS), name: V3_LABELS, sha256: '88d976477fac81127ac8ac4c215c37749d0a6537944112ea606d321317cb7640' },
+  v3Model: { url: lfs(LIVE_APP, `assets/models/${V3_MODEL}`), name: V3_MODEL, sha256: 'fa5611f56f8f84c0f36d6a40aed1e21e3abcf67340779dca084f4cccab8d1231' },
+  v3Labels: { url: raw(LIVE_APP, `assets/models/${V3_LABELS}`), name: V3_LABELS, sha256: '755942fd8c919ed532b88604a01e402e61ecb951e12e5371f963b4793c22646d' },
+  v3Blacklist: { url: raw(LIVE_APP, `assets/models/${V3_BLACKLIST}`), name: V3_BLACKLIST, sha256: '015e4b70aac84519a4173b78e6485527e0d6d676e3346153cf81a5b1893ef3d6' },
+  taxonomy: { url: raw(LIVE_APP, `assets/models/${TAXONOMY}`), name: TAXONOMY, sha256: '7616d9a810e27ea8969f1bc9a205fae0d63c0500640ef0f199ce809a4639e4d2' },
   birdboxModel: { url: raw(BIRDBOX, `docs/models/${BIRDBOX_MODEL}`), name: BIRDBOX_MODEL, sha256: '34b5720cb4fb65d5201d9e9d7cecd3b670d4838552d2a84a6843964407f7e057' },
 };
 
-// Species groups (labels column taxon_group). The model's non-animal classes
+// Species groups (labels column class). The model's non-animal classes
 // (gun, chainsaw, siren, ...) form one group, Sound.
 const CLASS_ORDER = ['Aves', 'Amphibia', 'Insecta', 'Arachnida', 'Mammalia', 'Reptilia', 'Actinopterygii', 'Sound'];
 const SOUND_GROUPS = new Set(['Anthropogenic', 'Geophony', 'Music']);
 
-// Species name languages (labels column suffix). Columns with poor coverage are
-// left out; missing names fall back to English.
-const NAME_LANGS = ['en', 'de', 'es', 'fr', 'it', 'pt', 'pt_PT', 'nl', 'pl', 'ru', 'cs', 'sk', 'sv', 'da', 'no', 'fi',
-  'uk', 'tr', 'ja', 'zh-CN', 'ca', 'bg', 'sr', 'hr', 'lt', 'et', 'cy', 'fa', 'sl', 'hu', 'ro', 'ar', 'ko', 'th', 'af'];
+// Species name languages: the taxonomy's common_name_<lang> columns. Languages with
+// poor coverage are left out; missing names fall back to English.
 const MIN_NAME_COVERAGE = 0.4;
 
 /* ------------------------------------------------------------------ */
@@ -416,23 +423,35 @@ async function main() {
   for (const name of readdirSync(UPSTREAM)) if (!current.has(name)) rmSync(join(UPSTREAM, name));
 
   // --- V3.0 audio model + labels: names the boxes --------------------------
-  const labels = parseCsv(readFileSync(paths.v3Labels, 'utf8'));
-  labels.forEach((l, i) => { if (+l.ix !== i) throw new Error(`V3 labels: ix ${l.ix} at row ${i}`); });
-  const groupOf = l => (SOUND_GROUPS.has(l.taxon_group) ? 'Sound' : l.taxon_group);
+  const labels = parseCsv(readFileSync(paths.v3Labels, 'utf8'), ';');
+  labels.forEach((l, i) => { if (+l.idx !== i) throw new Error(`V3 labels: idx ${l.idx} at row ${i}`); });
+  const groupOf = l => (SOUND_GROUPS.has(l.class) ? 'Sound' : l.class);
   const present = new Set(labels.map(groupOf));
   const classes = [...CLASS_ORDER.filter(c => present.has(c)), ...[...present].filter(c => !CLASS_ORDER.includes(c)).sort()];
   // [scientific name, English common name, class index]
-  const v3Species = labels.map(l => [l.scientific_name, l.common_name || l.scientific_name, classes.indexOf(groupOf(l))]);
+  const v3Species = labels.map(l => [l.sci_name, l.com_name || l.sci_name, classes.indexOf(groupOf(l))]);
+  // Score multipliers for labels known for false positives, by English common name as in
+  // BirdNET Live, which multiplies the scores with them before any threshold
+  const index = new Map(labels.map((l, i) => [l.com_name, i]));
+  const blacklist = Object.entries(JSON.parse(readFileSync(paths.v3Blacklist, 'utf8'))).map(([name, factor]) => {
+    if (!index.has(name)) throw new Error(`V3 score blacklist: no label "${name}"`);
+    if (!(factor >= 0 && factor <= 1)) throw new Error(`V3 score blacklist: ${name}: ${factor}`);
+    return [index.get(name), factor];
+  });
 
   writeIfChanged(join(DIST, 'v3', V3_MODEL), readFileSync(paths.v3Model));
-  writeIfChanged(join(DIST, 'v3', 'labels.json'), JSON.stringify({ classes, species: v3Species }));
+  writeIfChanged(join(DIST, 'v3', 'labels.json'), JSON.stringify({ classes, species: v3Species, blacklist }));
+  // Common names in other languages, from the taxonomy, by BirdNET ID
+  const taxonomy = parseCsv(readFileSync(paths.taxonomy, 'utf8'));
+  const taxon = new Map(taxonomy.map(t => [t.birdnet_id, t]));
+  const nameLangs = Object.keys(taxonomy[0]).filter(c => c.startsWith('common_name_') && c !== 'common_name_alt').map(c => c.slice(12));
   const names = {};
-  for (const lang of NAME_LANGS) {
+  for (const lang of nameLangs) {
     if (lang === 'en') continue;   // English is the base list itself
     const column = `common_name_${lang}`;
     let found = 0;
     const list = labels.map(l => {
-      const name = l[column] || '';
+      const name = taxon.get(l.birdnet_id)?.[column] || '';
       if (name) found++;
       return name;
     });
@@ -454,11 +473,11 @@ async function main() {
   // --- Manifest -----------------------------------------------------------
   const manifest = {
     sources: {
-      zenodo: `https://zenodo.org/records/${ZENODO.record}`,
+      birdnetLive: `https://github.com/${LIVE_APP.repo}/tree/${LIVE_APP.commit}/assets/models`,
       birdbox: `https://github.com/${BIRDBOX.repo}/tree/${BIRDBOX.commit}/docs/models`,
     },
     v3: {
-      name: 'BirdNET+ V3.0 Global 12K (FP16, pruned)',
+      name: 'BirdNET+ V3.0 Global 10K FP16 BNL',
       version: '3.0',
       sampleRate: 32000,
       species: labels.length,

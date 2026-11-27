@@ -431,8 +431,10 @@ class BirdBoxLive {
     try {
       const out = await v3.scoreBox(read, s.n, sound.g, sound.cuts, MIN_SCORE, { gen: 'birdbox', priority: 5, alive: () => this.session === s });
       if (this.session !== s) return;
-      // null: the box's audio is gone (scoring fell far behind): it stays without a species
-      s.scores.set(key, (out || []).filter(([c]) => catalog.cls[c] === catalog.aves));
+      // null: the box's audio is gone (scoring fell far behind): it stays without a species.
+      // Scores of labels known for false positives are lowered first, as in BirdNET Live.
+      s.scores.set(key, (out || []).filter(([c]) => catalog.cls[c] === catalog.aves)
+        .map(([c, p]) => [c, p * catalog.factor[c]]).filter(([, p]) => p >= MIN_SCORE));
       s.retryMs = RETRY_MS;
       s.scoring.delete(key);
       s.wanted.delete(key);

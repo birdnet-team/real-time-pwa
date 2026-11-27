@@ -33,7 +33,7 @@ To install the PWA on your device, open the site in a compatible browser (e.g., 
    npm install
    npm run serve
    ```
-   The first `npm run serve` or `npm run build` downloads the BirdBox and BirdNET V3.0 models (about 90 MB, see [BirdBox](#birdbox)).
+   The first `npm run serve` or `npm run build` downloads the BirdBox and BirdNET V3.0 models (about 85 MB, see [BirdBox](#birdbox)).
 3. Open your browser and navigate to `http://localhost:8080/real-time-pwa/` to view the site.
 
 ## BirdBox
@@ -46,13 +46,13 @@ With **Use BirdBox** switched on in the settings (it is off by default), the app
 
 Both models run with [ONNX Runtime Web](https://onnxruntime.ai/) (WASM) in web workers. They are downloaded once (about 100 MB with the runtime), kept in the browser, and also work offline. BirdNET V3.0 takes about 500 MB of memory while BirdBox is on, so BirdBox needs a reasonably fast device. Audio and boxes are kept for the last two minutes only, so memory does not grow while the app listens.
 
-The models are too large for this repository. `npm run build` and `npm run serve` first run `npm run fetch-models` (`scripts/fetch-models.mjs`), which downloads them from a pinned [Zenodo record](https://zenodo.org/records/24362980) (BirdNET+ V3.0 Global 12K, FP16 pruned) and a pinned BirdBox commit, checks their SHA-256, extracts BirdBox's two streaming graphs, and writes everything to `_models/` (gitignored). Eleventy publishes it as `/models/`, next to the BirdNET V2.4 files. The pins are the same as on the website; to update a model, change the record or commit and the hashes in the script.
+The models are too large for this repository. `npm run build` and `npm run serve` first run `npm run fetch-models` (`scripts/fetch-models.mjs`), which downloads them from pinned commits of [BirdNET Live](https://github.com/birdnet-team/birdnet-live-app) and BirdBox, checks their SHA-256, extracts BirdBox's two streaming graphs, and writes everything to `_models/` (gitignored). Eleventy publishes it as `/models/`, next to the BirdNET V2.4 files. BirdNET V3.0 is the build BirdNET Live ships (BirdNET+ V3.0 Global 10K FP16 BNL), with its labels, the common names of its taxonomy and its score multipliers for labels known for false positives, so boxes are named as BirdNET Live would name them; the BirdBox commit is the website's. To update a model, change the commit and the hashes in the script.
 
 ## License
 
 - **Source Code**: The source code for this project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
 - **Models**: The BirdNET V2.4 models in this repository are licensed under the [Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0)](https://creativecommons.org/licenses/by-sa/4.0/).
-- **BirdNET V3.0** (downloaded at build time, for BirdBox): the model weights are licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) and come with an acceptable use policy (`MODEL_LICENSE.txt` and `ACCEPTABLE_USE.txt` in the [Zenodo record](https://zenodo.org/records/24362980)).
+- **BirdNET+ V3.0** (BirdNET Live's build, downloaded at build time, for BirdBox): the model weights and labels are licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) and come with an acceptable use policy ([`MODEL_LICENSE`](https://github.com/birdnet-team/birdnet-live-app/blob/main/MODEL_LICENSE) and [`ACCEPTABLE_USE.md`](https://github.com/birdnet-team/birdnet-live-app/blob/main/ACCEPTABLE_USE.md) in the BirdNET Live repository).
 - **BirdBox** (downloaded at build time): the model weights are licensed under the [GNU Affero General Public License v3.0](https://www.gnu.org/licenses/agpl-3.0.html), in every format; see BirdBox's [licensing notice](https://github.com/birdnet-team/BirdBox/blob/main/NOTICE.md).
 
 Please ensure you review and adhere to the specific license terms provided with each model.
