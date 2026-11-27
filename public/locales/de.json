@@ -38,6 +38,8 @@
   "msg_geo_hint": "Filtert Arten basierend auf deinem aktuellen Standort.",
   "lbl_use_birdbox": "BirdBox verwenden",
   "msg_birdbox_hint": "Zeichnet Kästen um Vogelstimmen im Spektrogramm und benennt sie mit BirdNET V3.0. Lädt einmalig etwa 100 MB herunter und braucht ein schnelles Gerät.",
+  "lbl_birdbox_sure": "BirdBox-Schwellenwert für Arten",
+  "msg_birdbox_sure_hint": "Ein Kasten erhält eine Art, sobald sich BirdNET V3.0 dieser Art seit Beginn des Zuhörens irgendwo so sicher war. Höhere Werte benennen weniger Kästen, mit weniger Fehlern.",
   "main_birdbox_off": "BirdBox nicht aktiv",
   "main_birdbox_active": "BirdBox aktiv",
   "main_birdbox_loading": "BirdBox: Modelle werden geladen… {0}%",

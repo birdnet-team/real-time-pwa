@@ -38,6 +38,8 @@
   "msg_geo_hint": "Filtra le specie in base alla tua posizione attuale.",
   "lbl_use_birdbox": "Usa BirdBox",
   "msg_birdbox_hint": "Disegna riquadri attorno ai suoni degli uccelli nello spettrogramma e li identifica con BirdNET V3.0. Scarica circa 100 MB una sola volta e richiede un dispositivo veloce.",
+  "lbl_birdbox_sure": "Soglia specie BirdBox",
+  "msg_birdbox_sure_hint": "Un riquadro riceve una specie quando BirdNET V3.0 è stato così sicuro di quella specie in qualche punto dall'inizio dell'ascolto. Valori più alti danno un nome a meno riquadri, con meno errori.",
   "main_birdbox_off": "BirdBox non attivo",
   "main_birdbox_active": "BirdBox attivo",
   "main_birdbox_loading": "BirdBox: caricamento dei modelli… {0}%",

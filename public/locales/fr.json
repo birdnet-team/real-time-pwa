@@ -38,6 +38,8 @@
   "msg_geo_hint": "Filtre les espèces en fonction de ta position actuelle.",
   "lbl_use_birdbox": "Utiliser BirdBox",
   "msg_birdbox_hint": "Encadre les sons d'oiseaux sur le spectrogramme et les nomme avec BirdNET V3.0. Télécharge environ 100 Mo une seule fois et nécessite un appareil rapide.",
+  "lbl_birdbox_sure": "Seuil d'espèce BirdBox",
+  "msg_birdbox_sure_hint": "Un cadre reçoit une espèce dès que BirdNET V3.0 a été aussi sûr de cette espèce quelque part depuis le début de l'écoute. Des valeurs plus élevées nomment moins de cadres, avec moins d'erreurs.",
   "main_birdbox_off": "BirdBox inactif",
   "main_birdbox_active": "BirdBox actif",
   "main_birdbox_loading": "BirdBox : chargement des modèles… {0} %",

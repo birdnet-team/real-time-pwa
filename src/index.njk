@@ -77,6 +77,14 @@ permalink: "/"
       </div>
       <div class="geo-status mt-1" id="birdboxStatusText" data-i18n="main_birdbox_off">BirdBox not active</div>
       <div class="form-text small mt-2" data-i18n="msg_birdbox_hint">Draws boxes around bird sounds on the spectrogram and names them with BirdNET V3.0. Downloads about 100 MB once and needs a fast device.</div>
+      <div class="mt-3">
+        <div class="d-flex justify-content-between">
+          <label for="birdboxSureRange" class="form-label" data-i18n="lbl_birdbox_sure">BirdBox Species Threshold</label>
+          <span class="small text-muted">≥ <span class="form-range-value" id="birdboxSureValue">70%</span></span>
+        </div>
+        <input type="range" class="form-range" id="birdboxSureRange" min="30" max="95" step="5">
+        <div class="form-text small" data-i18n="msg_birdbox_sure_hint">A box gets a species once BirdNET V3.0 has been this sure of that species somewhere since listening started. Higher values name fewer boxes, with fewer mistakes.</div>
+      </div>
     </div>
 
     <div class="row g-3">

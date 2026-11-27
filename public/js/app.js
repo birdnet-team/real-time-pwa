@@ -238,7 +238,8 @@ let sensitivity = store.getFloat("bn_sensitivity", 1.0); // New: Sensitivity
 let inferenceInterval = store.getFloat("bn_inference_interval", 500);
 let rumbleFilterFreq = store.getFloat("bn_rumble_freq", 200);
 let geoThreshold = store.getFloat("bn_geo_threshold", 0.05);
-let birdboxEnabled = store.getBool("bn_birdbox_enabled", false); // BirdBox boxes on the spectrogram (off by default)
+let birdboxEnabled = store.getBool("bn_birdbox_enabled", false);
+let birdboxSure = store.getFloat("bn_birdbox_sure", 0.7);   // BirdBox species confidence // BirdBox boxes on the spectrogram (off by default)
 
 /* ==========================================================================
    5. DOM ACCESSORS
@@ -921,6 +922,12 @@ function initUIControls() {
     spectroGain = v;
   }, (v) => `${v.toFixed(1)}×`, "bn_spec_gain");
 
+  bindRange("birdboxSureRange", birdboxSure * 100, (v) => {
+    birdboxSure = v / 100;
+    store.set("bn_birdbox_sure", birdboxSure);
+    birdBox()?.setSure(birdboxSure);
+  }, (v) => `${Math.round(v)}%`);
+
   bindRange("thresholdRange", detectionThreshold * 100, (v) => {
     detectionThreshold = v / 100;
     store.set("bn_threshold", detectionThreshold);
@@ -1382,6 +1389,7 @@ function initBirdBox() {
       onStatus: updateBirdBoxDisplay,
     });
     bb.setLabelLang(currentLabelLang);
+    bb.setSure(birdboxSure);
     updateBirdBoxGeo();
     if (birdboxEnabled) {
       bb.enable();

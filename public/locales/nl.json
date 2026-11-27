@@ -38,6 +38,8 @@
   "msg_geo_hint": "Filtert soorten op basis van je huidige locatie.",
   "lbl_use_birdbox": "BirdBox gebruiken",
   "msg_birdbox_hint": "Tekent kaders rond vogelgeluiden in het spectrogram en benoemt ze met BirdNET V3.0. Downloadt eenmalig ongeveer 100 MB en vereist een snel apparaat.",
+  "lbl_birdbox_sure": "BirdBox-soortdrempel",
+  "msg_birdbox_sure_hint": "Een kader krijgt een soort zodra BirdNET V3.0 sinds het begin van het luisteren ergens zo zeker was van die soort. Hogere waarden benoemen minder kaders, met minder fouten.",
   "main_birdbox_off": "BirdBox niet actief",
   "main_birdbox_active": "BirdBox actief",
   "main_birdbox_loading": "BirdBox: modellen laden… {0}%",

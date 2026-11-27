@@ -14,8 +14,9 @@
  *   with everything outside its frequency band, and the parts that smaller boxes
  *   inside it cover, replaced by background noise (region-cut.js). Only birds count.
  * - A box is named after its best-scoring bird among the species the recording surely
- *   holds: those that are the best bird of some box at the species confidence (0.7,
- *   the website's default) or more. Such a species names a box from half that score.
+ *   holds: those that are the best bird of some box at the species confidence (a
+ *   setting, 0.7 by default as on the website) or more. Such a species names a box
+ *   from half that score.
  *   With the geolocation filter on, only species the app's location model expects
  *   there are candidates.
  *
@@ -35,8 +36,8 @@ import { getManifest } from './model-store.js';
 
 const CONF = 0.15;            // BirdBox's confidence: the website's default
 const PHRASE_GAP = 0.05;      // seconds: BirdBox's phrase gap, the website's default
-const SPECIES_CONF = 0.7;     // the website's default species confidence
-const SPECIES_LOW = 0.5;      // a species surely in the recording names a box from this share of SPECIES_CONF
+const SPECIES_CONF = 0.7;     // species confidence until the app sets it (setSure): the website's default
+const SPECIES_LOW = 0.5;      // a species surely in the recording names a box from this share of the species confidence
 const MIN_SCORE = 0.05;       // BirdNET V3.0 scores below this are not kept
 const CANDIDATES = 5;         // species a box offers, best first
 const HOP = 1.5;              // seconds from one BirdBox window to the next
@@ -84,6 +85,7 @@ class BirdBoxLive {
     this.colors = new Map();  // species -> its color on the spectrogram
     this.geo = null;          // scientific name -> location score, or null when the filter is off
     this.labelLang = 'en_us';
+    this.sureLevel = SPECIES_CONF;   // species confidence: a species this sure in some box names boxes (setSure)
     this.status = { state: 'off' };
     this.preloading = null;
     this.canvas = null;
@@ -431,7 +433,7 @@ class BirdBoxLive {
       s.scoring.delete(key);
       s.wanted.delete(key);
       const top = this._candidates(s, key)?.[0];
-      if (top && top.p >= SPECIES_CONF) s.sure.add(top.s);
+      if (top && top.p >= this.sureLevel) s.sure.add(top.s);
       this.requestDraw();
     } catch (err) {
       if (this.session !== s || err.cancelled) return;
@@ -483,7 +485,7 @@ class BirdBoxLive {
     const sound = s.sounds.get(b), cands = sound && this._candidates(s, sound.key);
     if (!cands?.length) return NONE;
     const pick = cands.find(c => s.sure.has(c.s));
-    return pick && pick.p >= SPECIES_LOW * SPECIES_CONF ? pick.s : NONE;
+    return pick && pick.p >= SPECIES_LOW * this.sureLevel ? pick.s : NONE;
   }
 
   _color(species) {
@@ -504,10 +506,26 @@ class BirdBoxLive {
     const s = this.session;
     if (!s) return;
     s.candidates.clear();
+    this._findSure(s);
+  }
+
+  /**
+   * The species confidence (0..1), the app's BirdBox Species Threshold: a box gets a
+   * species once BirdNET V3.0 has been this sure of that species in some box, and its
+   * own score is at least half of it. Boxes already scored are named again at once.
+   */
+  setSure(level) {
+    if (!(level > 0 && level <= 1) || level === this.sureLevel) return;
+    this.sureLevel = level;
+    if (this.session) this._findSure(this.session);
+  }
+
+  /** The species the session surely holds, found again from all scores. */
+  _findSure(s) {
     s.sure = new Set();
     for (const key of s.scores.keys()) {
       const top = this._candidates(s, key)?.[0];
-      if (top && top.p >= SPECIES_CONF) s.sure.add(top.s);
+      if (top && top.p >= this.sureLevel) s.sure.add(top.s);
     }
     this.requestDraw();
   }
